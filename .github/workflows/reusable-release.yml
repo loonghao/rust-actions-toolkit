@@ -65,6 +65,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install packages (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            musl-tools \
+            curl \
+            git
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:

@@ -142,7 +142,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libssl-dev
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            musl-tools \
+            curl \
+            git
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
