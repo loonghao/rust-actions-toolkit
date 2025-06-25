@@ -59,25 +59,63 @@ yum install -y \
     openssl-devel
 ```
 
-### Solution 3: Environment Variables
+### Solution 3: Cross.toml Configuration (For cross-compilation)
+
+Create a `Cross.toml` file in your project root:
+
+```toml
+# Cross.toml
+[build.env]
+passthrough = [
+    "OPENSSL_STATIC",
+    "OPENSSL_LIB_DIR",
+    "OPENSSL_INCLUDE_DIR",
+    "PKG_CONFIG_ALLOW_CROSS"
+]
+
+[target.x86_64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
+pre-build = [
+    "apt-get update && apt-get install -y libssl-dev pkg-config"
+]
+```
+
+Copy the complete example:
+```bash
+curl -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross.toml
+```
+
+### Solution 4: Environment Variables
 
 If you must use OpenSSL, set these environment variables:
 
 ```yaml
 # In your workflow
 env:
-  OPENSSL_DIR: /usr
+  OPENSSL_STATIC: 1  # For musl targets
   OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
   OPENSSL_INCLUDE_DIR: /usr/include/openssl
+  PKG_CONFIG_ALLOW_CROSS: 1
 ```
 
-### Solution 4: Vendored OpenSSL
+### Solution 5: Vendored OpenSSL
 
 Force vendored OpenSSL compilation:
 
 ```toml
 [dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
+```
+
+### Solution 6: Use our toolkit (Automatic)
+
+Our rust-actions-toolkit automatically handles OpenSSL issues:
+
+```yaml
+# Automatically installs dependencies and sets environment variables
+- uses: loonghao/rust-actions-toolkit@v1
+  with:
+    command: ci
 ```
 
 ## 🎯 Best Practices

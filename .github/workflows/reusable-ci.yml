@@ -169,6 +169,13 @@ jobs:
           echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
           echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
 
+          # Set OpenSSL environment variables for cross-compilation
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+            echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+          fi
+
       - name: Build workspace
         run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
 
