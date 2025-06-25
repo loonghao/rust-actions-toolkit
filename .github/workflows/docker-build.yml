@@ -61,7 +61,7 @@ jobs:
 
       - name: Build and push base image
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/base.Dockerfile
@@ -107,7 +107,7 @@ jobs:
             type=raw,value=latest-${{ matrix.image }},enable={{is_default_branch}}
 
       - name: Build and push specialized image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/${{ matrix.image }}.Dockerfile
