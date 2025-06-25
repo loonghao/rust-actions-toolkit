@@ -16,8 +16,10 @@
 - **🔒 Security**: Automated vulnerability scanning with cargo-audit
 - **📊 Coverage**: Code coverage reporting with Codecov integration
 - **🚀 Releases**: Cross-platform binary releases with automated uploads
+- **📦 Zero-Dependency**: Build portable executables that run anywhere
 - **🐍 Python**: Python wheel building and distribution
 - **📦 Publishing**: Automated crates.io publishing with release-plz
+- **🐳 Docker**: Pre-configured containers for consistent builds
 
 ## 🚀 Quick Start
 
@@ -52,6 +54,25 @@ jobs:
         with:
           command: release-plz
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+```
+
+### Zero-Dependency Windows EXE
+
+```yaml
+name: Build Windows EXE
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    container: ghcr.io/loonghao/rust-toolkit:cross-compile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build portable Windows EXE
+        run: build-windows x86_64-pc-windows-gnu my-app
+      - name: Verify zero dependencies
+        run: verify-static target/x86_64-pc-windows-gnu/release/my-app.exe
 ```
 
 ### Cross-Platform Releases

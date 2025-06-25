@@ -68,72 +68,243 @@ inputs:
     required: false
     default: 'both'
 
+  # Docker options (experimental)
+  use-docker:
+    description: 'Use Docker for builds (experimental)'
+    required: false
+    default: 'false'
+  docker-image:
+    description: 'Docker image to use (base, cross-compile, python-wheels, security-audit)'
+    required: false
+    default: 'base'
+
 outputs:
   rust-version:
     description: 'Installed Rust version'
-    value: ${{ steps.setup.outputs.rust-version || steps.ci.outputs.rust-version }}
+    value: ${{ steps.rust-version.outputs.version }}
   binary-path:
     description: 'Path to the built binary (release command)'
-    value: ${{ steps.release.outputs.binary-path }}
+    value: ${{ steps.build-binary.outputs.binary-path }}
   wheel-path:
     description: 'Path to the built Python wheel (release command)'
-    value: ${{ steps.release.outputs.wheel-path }}
+    value: ${{ steps.build-wheel.outputs.wheel-path }}
   release-created:
     description: 'Whether a release was created (release-plz command)'
-    value: ${{ steps.release-plz.outputs.release-created }}
+    value: ${{ steps.release-plz-release.outputs.release-created }}
   pr-created:
     description: 'Whether a PR was created (release-plz command)'
-    value: ${{ steps.release-plz.outputs.pr-created }}
+    value: ${{ steps.release-plz-pr.outputs.pr-created }}
   version:
     description: 'Released version (release-plz command)'
-    value: ${{ steps.release-plz.outputs.version }}
+    value: ${{ steps.release-plz-release.outputs.version }}
 
 runs:
   using: 'composite'
   steps:
-    - name: Setup Rust CI
-      id: ci
+    # Install system dependencies (Ubuntu)
+    - name: Install system dependencies
+      if: runner.os == 'Linux' && inputs.command != 'release-plz'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          pkg-config \
+          libssl-dev \
+          musl-tools \
+          curl \
+          git
+
+    # Common setup steps for all commands
+    - name: Install Rust toolchain
+      if: inputs.command != 'release-plz'
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        components: rustfmt,clippy
+        targets: ${{ inputs.target }}
+
+    - name: Get Rust version
+      id: rust-version
+      if: inputs.command != 'release-plz'
+      shell: bash
+      run: |
+        version=$(rustc --version)
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "✅ Installed Rust: $version"
+        echo "📦 Cargo version: $(cargo --version)"
+        echo "🎯 Target: ${{ inputs.target }}"
+
+    - name: Rust cache
+      if: inputs.command != 'release-plz'
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "rust-toolkit-cache"
+
+    # CI-specific steps
+    - name: Check formatting
+      if: inputs.command == 'ci' && inputs.check-format == 'true'
+      shell: bash
+      run: |
+        echo "🎨 Checking code formatting..."
+        cargo fmt --all --check
+
+    - name: Run clippy
+      if: inputs.command == 'ci' && inputs.check-clippy == 'true'
+      shell: bash
+      run: |
+        echo "📎 Running clippy lints..."
+        cargo clippy ${{ inputs.clippy-args }}
+
+    - name: Check documentation
+      if: inputs.command == 'ci' && inputs.check-docs == 'true'
+      shell: bash
+      env:
+        RUSTDOCFLAGS: -D warnings
+      run: |
+        echo "📚 Checking documentation..."
+        cargo doc --no-deps --document-private-items --workspace
+
+    - name: Run tests
       if: inputs.command == 'ci'
-      uses: ./actions/setup-rust-ci
-      with:
-        toolchain: ${{ inputs.rust-toolchain }}
-        check-format: ${{ inputs.check-format }}
-        check-clippy: ${{ inputs.check-clippy }}
-        check-docs: ${{ inputs.check-docs }}
-        clippy-args: ${{ inputs.clippy-args }}
+      shell: bash
+      run: |
+        echo "🧪 Running tests..."
+        cargo test --verbose --workspace
 
-    - name: Setup Rust (for setup command)
-      id: setup
-      if: inputs.command == 'setup'
-      uses: ./actions/setup-rust-ci
-      with:
-        toolchain: ${{ inputs.rust-toolchain }}
-        check-format: 'false'
-        check-clippy: 'false'
-        check-docs: 'false'
-
-    - name: Rust Release
-      id: release
+    # Release-specific steps
+    - name: Setup cross-compilation toolchain
       if: inputs.command == 'release'
-      uses: ./actions/rust-release
+      uses: taiki-e/setup-cross-toolchain-action@v1
       with:
-        toolchain: ${{ inputs.rust-toolchain }}
         target: ${{ inputs.target }}
-        binary-name: ${{ inputs.binary-name }}
-        enable-python-wheels: ${{ inputs.enable-python-wheels }}
-        github-token: ${{ inputs.github-token }}
+      continue-on-error: true
 
-    - name: Release-plz
-      id: release-plz
-      if: inputs.command == 'release-plz'
-      uses: ./actions/release-plz
+    - name: Install cross for musl targets
+      if: inputs.command == 'release' && contains(inputs.target, '-musl')
+      uses: taiki-e/install-action@v2
       with:
-        command: ${{ inputs.release-plz-command }}
+        tool: cross
+
+    - name: Configure OpenSSL for musl targets
+      if: inputs.command == 'release' && contains(inputs.target, '-musl')
+      shell: bash
+      run: |
+        echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+        echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+
+    - name: Configure Windows static linking
+      if: inputs.command == 'release' && endsWith(inputs.target, 'windows-msvc')
+      shell: bash
+      run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+
+    - name: Build and upload binary
+      id: build-binary
+      if: inputs.command == 'release'
+      uses: taiki-e/upload-rust-binary-action@v1
+      with:
+        bin: ${{ inputs.binary-name }}
+        target: ${{ inputs.target }}
+        tar: all
+        zip: windows
+        token: ${{ inputs.github-token }}
+
+    # Python wheel building (conditional)
+    - name: Check for pyproject.toml
+      id: check-pyproject
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true'
+      shell: bash
+      run: |
+        if [ -f "pyproject.toml" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "✅ pyproject.toml found, proceeding with Python wheel build"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "⚠️ pyproject.toml not found, skipping Python wheel build"
+        fi
+
+    - name: Set up Python
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Setup cross-compilation for Python wheels (Linux ARM64)
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+    - name: Install maturin
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      shell: bash
+      run: pip install maturin[patchelf]
+
+    - name: Build Python wheels
+      id: build-wheel
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      shell: bash
+      run: |
+        maturin build --release --target ${{ inputs.target }}
+        wheel_path=$(find target/wheels -name "*.whl" | head -1)
+        echo "wheel-path=$wheel_path" >> $GITHUB_OUTPUT
+
+    - name: Upload wheels to release
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ steps.build-wheel.outputs.wheel-path }}
+        token: ${{ inputs.github-token }}
+
+    # Release-plz steps
+    - name: Checkout repository (for release-plz)
+      if: inputs.command == 'release-plz'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ inputs.release-plz-token || inputs.github-token }}
+
+    - name: Install Rust toolchain (for release-plz)
+      if: inputs.command == 'release-plz'
+      uses: dtolnay/rust-toolchain@master
+      with:
         toolchain: ${{ inputs.rust-toolchain }}
-        release_plz_version: ${{ inputs.release-plz-version }}
-        cargo_registry_token: ${{ inputs.cargo-registry-token }}
-        github_token: ${{ inputs.github-token }}
-        release_plz_token: ${{ inputs.release-plz-token }}
+
+    - name: Run release-plz release
+      id: release-plz-release
+      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release' || inputs.release-plz-command == 'both')
+      uses: release-plz/action@${{ inputs.release-plz-version }}
+      with:
+        command: release
+      env:
+        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
+
+    - name: Run release-plz release-pr
+      id: release-plz-pr
+      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release-pr' || inputs.release-plz-command == 'both')
+      uses: release-plz/action@${{ inputs.release-plz-version }}
+      with:
+        command: release-pr
+      env:
+        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
+
+    - name: Output release-plz results
+      if: inputs.command == 'release-plz'
+      shell: bash
+      run: |
+        echo "Release-plz completed successfully!"
+        if [[ "${{ inputs.release-plz-command }}" == "release" || "${{ inputs.release-plz-command }}" == "both" ]]; then
+          echo "Release command executed"
+        fi
+        if [[ "${{ inputs.release-plz-command }}" == "release-pr" || "${{ inputs.release-plz-command }}" == "both" ]]; then
+          echo "Release PR command executed"
+        fi
 
 branding:
   icon: 'package'

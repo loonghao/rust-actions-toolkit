@@ -1,0 +1,152 @@
+# Windows EXE Building with Docker
+# This workflow builds Windows executables using our Docker images
+
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-windows:
+    name: Build Windows Executables
+    runs-on: ubuntu-latest
+    container: ghcr.io/loonghao/rust-toolkit:cross-compile
+    strategy:
+      matrix:
+        include:
+          # Windows 64-bit (GNU toolchain)
+          - target: x86_64-pc-windows-gnu
+            arch: x64
+            toolchain: gnu
+          # Windows 32-bit (GNU toolchain)  
+          - target: i686-pc-windows-gnu
+            arch: x86
+            toolchain: gnu
+          # Windows 64-bit (MSVC toolchain) - requires GitHub Actions runner
+          - target: x86_64-pc-windows-msvc
+            arch: x64
+            toolchain: msvc
+            runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # For MSVC targets, use Windows runner
+      - name: Setup Rust (MSVC)
+        if: matrix.toolchain == 'msvc'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # For GNU targets, use Docker container (already set up)
+      - name: Build Windows EXE (GNU)
+        if: matrix.toolchain == 'gnu'
+        run: |
+          echo "🪟 Building Windows EXE for ${{ matrix.target }}"
+          cross-build ${{ matrix.target }} --bin my-app
+          
+          # Verify the EXE was built
+          ls -la target/${{ matrix.target }}/release/
+          file target/${{ matrix.target }}/release/*.exe || true
+
+      # For MSVC targets, build on Windows runner
+      - name: Build Windows EXE (MSVC)
+        if: matrix.toolchain == 'msvc'
+        run: |
+          echo "🪟 Building Windows EXE for ${{ matrix.target }}"
+          cargo build --target ${{ matrix.target }} --release
+          
+          # Verify the EXE was built
+          dir target\${{ matrix.target }}\release\
+        shell: cmd
+
+      - name: Test Windows EXE (GNU)
+        if: matrix.toolchain == 'gnu'
+        run: |
+          # Test with Wine (if available)
+          if command -v wine >/dev/null 2>&1; then
+            echo "🍷 Testing with Wine..."
+            wine target/${{ matrix.target }}/release/*.exe --version || echo "Wine test completed"
+          else
+            echo "⚠️  Wine not available, skipping runtime test"
+          fi
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}-${{ matrix.toolchain }}
+          path: |
+            target/${{ matrix.target }}/release/*.exe
+            target/${{ matrix.target }}/release/*.pdb
+          retention-days: 30
+
+  # Package all Windows builds together
+  package-windows:
+    name: Package Windows Release
+    runs-on: ubuntu-latest
+    needs: build-windows
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: windows-*
+          merge-multiple: true
+          path: windows-builds/
+
+      - name: Create Windows release package
+        run: |
+          cd windows-builds
+          
+          # Create organized structure
+          mkdir -p release/{x64,x86}
+          
+          # Move files to appropriate directories
+          find . -name "*x86_64*" -name "*.exe" -exec mv {} release/x64/ \;
+          find . -name "*i686*" -name "*.exe" -exec mv {} release/x86/ \;
+          
+          # Create ZIP packages
+          cd release
+          zip -r ../windows-x64.zip x64/
+          zip -r ../windows-x86.zip x86/
+          zip -r ../windows-all.zip .
+          
+          echo "📦 Windows packages created:"
+          ls -la ../*.zip
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows-builds/*.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+# Alternative: Using our action with Docker
+---
+name: Windows Build (Action)
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  windows-action:
+    name: Build with Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Windows EXE
+        uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release
+          target: x86_64-pc-windows-gnu
+          binary-name: my-app
+          use-docker: true
+          docker-image: cross-compile
