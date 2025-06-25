@@ -139,6 +139,50 @@ CI 工作流包括：
 - `binary-crate/` - CLI 工具示例
 - `python-wheel/` - Python 绑定示例
 
+## ⚙️ 项目设置
+
+### 必需文件
+
+要在你的 Rust 项目中使用此工具包，你需要：
+
+1. **Cargo.toml** - 标准 Rust 项目文件
+2. **release-plz.toml** - 自动发布配置（可选）
+
+### 必需密钥
+
+在你的 GitHub 仓库中添加这些密钥：
+
+- `CARGO_REGISTRY_TOKEN` - 你的 crates.io API token（用于 Rust crate 发布）
+- `CODECOV_TOKEN` - 你的 Codecov token（可选，用于覆盖率报告）
+- `RELEASE_PLZ_TOKEN` - 用于发布自动化的 GitHub PAT（可选，增强功能）
+
+### 自动发布设置
+
+此工具包使用 **release-plz** 进行自动版本管理。创建 `release-plz.toml` 文件：
+
+```toml
+[workspace]
+changelog_update = true
+git_release_enable = false
+git_tag_enable = true
+release = true
+
+[[package]]
+name = "your-package-name"  # 改为你的包名
+changelog_update = true
+git_release_enable = true
+release = true
+git_tag_name = "v{{version}}"
+git_release_draft = false
+```
+
+### 工作流程
+
+1. **推送到 main** → `release-plz.yml` 创建发布 PR
+2. **合并发布 PR** → `release-plz.yml` 创建标签和 GitHub 发布
+3. **创建标签** → `release.yml` 构建跨平台二进制文件
+4. **上传二进制文件** → 用户可以从 GitHub 发布页面下载
+
 ## 🤝 贡献
 
 欢迎贡献！请阅读我们的[贡献指南](CONTRIBUTING.md)。
