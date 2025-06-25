@@ -1,0 +1,48 @@
+# Example: Simplest possible CI setup using the GitHub Action
+# Place this file at .github/workflows/ci.yml in your project
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # All-in-one CI job
+  ci:
+    name: Rust CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Rust CI
+        uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: ci
+          rust-toolchain: stable
+          check-format: true
+          check-clippy: true
+          check-docs: true
+
+  # Cross-platform testing
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: setup
+          rust-toolchain: stable
+
+      - name: Run tests
+        run: cargo test --verbose --workspace

@@ -1,0 +1,101 @@
+name: 'Rust Actions Toolkit'
+description: '🦀 Universal GitHub Actions toolkit for Rust projects - CI/CD, cross-platform builds, releases, and Python wheels'
+author: 'loonghao'
+
+inputs:
+  command:
+    description: 'Command to run: ci, release, or setup'
+    required: true
+    default: 'ci'
+  
+  # Common inputs
+  rust-toolchain:
+    description: 'Rust toolchain version'
+    required: false
+    default: 'stable'
+  
+  # CI specific inputs
+  check-format:
+    description: 'Run cargo fmt --check (ci command)'
+    required: false
+    default: 'true'
+  check-clippy:
+    description: 'Run cargo clippy (ci command)'
+    required: false
+    default: 'true'
+  check-docs:
+    description: 'Run cargo doc (ci command)'
+    required: false
+    default: 'true'
+  clippy-args:
+    description: 'Additional arguments for clippy (ci command)'
+    required: false
+    default: '--all-targets --all-features -- -D warnings'
+  
+  # Release specific inputs
+  target:
+    description: 'Target platform for release (release command)'
+    required: false
+    default: ''
+  binary-name:
+    description: 'Binary name to release (release command)'
+    required: false
+    default: ''
+  enable-python-wheels:
+    description: 'Enable Python wheel building (release command)'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token for release uploads (release command)'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  rust-version:
+    description: 'Installed Rust version'
+    value: ${{ steps.setup.outputs.rust-version || steps.ci.outputs.rust-version }}
+  binary-path:
+    description: 'Path to the built binary (release command)'
+    value: ${{ steps.release.outputs.binary-path }}
+  wheel-path:
+    description: 'Path to the built Python wheel (release command)'
+    value: ${{ steps.release.outputs.wheel-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Rust CI
+      id: ci
+      if: inputs.command == 'ci'
+      uses: ./actions/setup-rust-ci
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        check-format: ${{ inputs.check-format }}
+        check-clippy: ${{ inputs.check-clippy }}
+        check-docs: ${{ inputs.check-docs }}
+        clippy-args: ${{ inputs.clippy-args }}
+
+    - name: Setup Rust (for setup command)
+      id: setup
+      if: inputs.command == 'setup'
+      uses: ./actions/setup-rust-ci
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        check-format: 'false'
+        check-clippy: 'false'
+        check-docs: 'false'
+
+    - name: Rust Release
+      id: release
+      if: inputs.command == 'release'
+      uses: ./actions/rust-release
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        target: ${{ inputs.target }}
+        binary-name: ${{ inputs.binary-name }}
+        enable-python-wheels: ${{ inputs.enable-python-wheels }}
+        github-token: ${{ inputs.github-token }}
+
+branding:
+  icon: 'package'
+  color: 'orange'

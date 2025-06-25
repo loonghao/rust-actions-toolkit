@@ -1,0 +1,60 @@
+name: Publish Action
+
+# Publish to GitHub Marketplace when a new release is created
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish to Marketplace
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate action.yml
+        run: |
+          # Basic validation of action.yml
+          if [ ! -f action.yml ]; then
+            echo "❌ action.yml not found"
+            exit 1
+          fi
+          
+          # Check if required fields are present
+          if ! grep -q "name:" action.yml; then
+            echo "❌ Missing 'name' field in action.yml"
+            exit 1
+          fi
+          
+          if ! grep -q "description:" action.yml; then
+            echo "❌ Missing 'description' field in action.yml"
+            exit 1
+          fi
+          
+          echo "✅ action.yml validation passed"
+
+      - name: Create major version tag
+        run: |
+          # Extract major version from tag (e.g., v1.2.3 -> v1)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          MAJOR_VERSION=$(echo $TAG_NAME | cut -d. -f1)
+          
+          echo "Creating/updating major version tag: $MAJOR_VERSION"
+          
+          # Create or update the major version tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa $MAJOR_VERSION -m "Update $MAJOR_VERSION to $TAG_NAME"
+          git push origin $MAJOR_VERSION --force
+
+      - name: Notify success
+        run: |
+          echo "🚀 Action published successfully!"
+          echo "Users can now use: uses: ${{ github.repository }}@${GITHUB_REF#refs/tags/}"
+          echo "Or the major version: uses: ${{ github.repository }}@$(echo ${GITHUB_REF#refs/tags/} | cut -d. -f1)"

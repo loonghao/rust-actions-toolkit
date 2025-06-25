@@ -1,0 +1,57 @@
+# Example: Complete setup with CI, release-plz, and releases
+# This shows how to use the GitHub Action for a complete Rust project setup
+
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: ci
+
+---
+# .github/workflows/release-plz.yml
+name: Release-plz
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v1
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+---
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

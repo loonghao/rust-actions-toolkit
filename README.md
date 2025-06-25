@@ -21,9 +21,55 @@
 
 ## 🚀 Quick Start
 
-Choose one of three ways to use this toolkit:
+Choose one of four ways to use this toolkit:
 
-### Method 1: Reusable Workflows (Recommended) 🌟
+### Method 1: GitHub Action (Easiest) 🌟
+
+Use the published GitHub Action directly:
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: ci
+          rust-toolchain: stable
+```
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Method 2: Reusable Workflows
 
 Create simple workflow files that call our reusable workflows:
 
@@ -65,7 +111,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Method 2: Composite Actions
+### Method 3: Composite Actions
 
 Use our actions in your existing workflows:
 
@@ -85,7 +131,7 @@ jobs:
           check-clippy: true
 ```
 
-### Method 3: Copy Files (Full Control)
+### Method 4: Copy Files (Full Control)
 
 Copy and customize the workflow files:
 
