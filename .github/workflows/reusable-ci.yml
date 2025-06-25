@@ -206,7 +206,6 @@ jobs:
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -220,28 +219,43 @@ jobs:
   python-wheel:
     name: Python Wheel Test
     runs-on: ubuntu-latest
-    if: ${{ inputs.enable-python-wheel && hashFiles('pyproject.toml') != '' }}
+    if: ${{ inputs.enable-python-wheel }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check for pyproject.toml
+        id: check-pyproject
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ pyproject.toml not found, skipping Python wheel test"
+          fi
+
       - name: Set up Python
+        if: steps.check-pyproject.outputs.exists == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
       - name: Install Rust toolchain
+        if: steps.check-pyproject.outputs.exists == 'true'
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Install maturin
+        if: steps.check-pyproject.outputs.exists == 'true'
         run: pip install maturin[patchelf]
 
       - name: Build Python wheel
+        if: steps.check-pyproject.outputs.exists == 'true'
         run: maturin build --release
 
       - name: Test Python wheel
+        if: steps.check-pyproject.outputs.exists == 'true'
         run: |
           pip install target/wheels/*.whl
           python -c "import $(basename $(pwd) | tr '-' '_'); print('Python wheel import successful')"

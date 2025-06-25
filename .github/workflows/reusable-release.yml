@@ -96,7 +96,7 @@ jobs:
   # Build and upload Python wheels (conditional)
   upload-python-wheels:
     name: Upload Python wheels
-    if: ${{ startsWith(github.ref_name, 'v') && inputs.enable-python-wheels && hashFiles('pyproject.toml') != '' }}
+    if: ${{ startsWith(github.ref_name, 'v') && inputs.enable-python-wheels }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -115,31 +115,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check for pyproject.toml
+        id: check-pyproject
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ pyproject.toml found, proceeding with Python wheel build"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ pyproject.toml not found, skipping Python wheel build"
+            exit 0
+          fi
+
       - name: Set up Python
+        if: steps.check-pyproject.outputs.exists == 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.11'
 
       - name: Install Rust toolchain
+        if: steps.check-pyproject.outputs.exists == 'true'
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-toolchain }}
           targets: ${{ matrix.target }}
 
       - name: Setup cross-compilation (Linux)
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        if: steps.check-pyproject.outputs.exists == 'true' && matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Install maturin
+        if: steps.check-pyproject.outputs.exists == 'true'
         run: pip install maturin[patchelf]
 
       - name: Build Python wheels
+        if: steps.check-pyproject.outputs.exists == 'true'
         run: maturin build --release --target ${{ matrix.target }}
 
       - name: Upload wheels to release
+        if: steps.check-pyproject.outputs.exists == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: target/wheels/*.whl
