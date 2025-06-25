@@ -32,9 +32,8 @@ jobs:
           {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"},
           {"target": "aarch64-pc-windows-msvc", "os": "windows-2022"}
         ]
-    secrets:
-      # Required: For GitHub release uploads
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
+    # No secrets need to be passed for this workflow
 
 # This reusable workflow:
 # 1. Builds binaries for all specified target platforms
