@@ -1,7 +1,7 @@
 # Base Rust toolkit image with common dependencies
 # This serves as the foundation for all specialized images
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.title="Rust Actions Toolkit - Base"
 LABEL org.opencontainers.image.description="Base image with Rust toolchain and common build dependencies"
