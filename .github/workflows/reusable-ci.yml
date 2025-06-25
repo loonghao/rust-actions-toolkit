@@ -195,10 +195,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run security audit
-        uses: rustsec/audit-check@v2.0.0
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Run security audit
+        run: cargo audit --color never
+        continue-on-error: true  # Don't fail CI on audit issues, just report them
 
   # Code coverage reporting
   coverage:

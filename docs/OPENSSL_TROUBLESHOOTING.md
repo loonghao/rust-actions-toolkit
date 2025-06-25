@@ -248,11 +248,34 @@ http-client = ["reqwest"]
 - [Cross-compilation Guide](https://rust-lang.github.io/rustup/cross-compilation.html)
 - [OpenSSL-sys Documentation](https://docs.rs/openssl-sys/)
 
+## 🔒 Security Considerations
+
+When dealing with TLS libraries, security is paramount:
+
+### Security Auditing
+
+```bash
+# Regular security audits
+cargo audit
+
+# Check for OpenSSL-specific vulnerabilities
+cargo audit --package openssl
+```
+
+### Keep Dependencies Updated
+
+```toml
+# Use recent versions
+reqwest = "0.12"  # Latest version
+rustls = "0.23"   # Latest rustls
+```
+
 ## 💡 Need Help?
 
 If you're still experiencing issues:
 
 1. Check if your dependencies require OpenSSL
 2. Consider using rustls alternatives
-3. Open an issue with your `Cargo.toml` and error details
-4. Reference this guide in your issue
+3. Review our [Security Audit Guide](../examples/security-audit/README.md)
+4. Open an issue with your `Cargo.toml` and error details
+5. Reference this guide in your issue
