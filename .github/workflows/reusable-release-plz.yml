@@ -27,9 +27,11 @@ on:
         description: 'GitHub token'
         required: true
 
-permissions:
-  pull-requests: write
-  contents: write
+# Note: Permissions are inherited from the calling workflow
+# The calling workflow should include:
+# permissions:
+#   contents: write        # For creating releases and tags
+#   pull-requests: write   # For creating release PRs
 
 jobs:
   # Release unpublished packages to crates.io

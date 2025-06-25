@@ -36,10 +36,12 @@ on:
         description: 'Codecov token for coverage reporting'
         required: false
 
-permissions:
-  contents: read
-  actions: read
-  security-events: write
+# Note: Permissions are inherited from the calling workflow
+# The calling workflow should include:
+# permissions:
+#   contents: read
+#   actions: read          # For security audit
+#   security-events: write # For security audit
 
 env:
   CARGO_TERM_COLOR: always

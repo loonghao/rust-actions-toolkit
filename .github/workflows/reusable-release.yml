@@ -41,8 +41,10 @@ on:
         description: 'GitHub token for release uploads'
         required: true
 
-permissions:
-  contents: write
+# Note: Permissions are inherited from the calling workflow
+# The calling workflow should include:
+# permissions:
+#   contents: write  # For uploading release assets
 
 env:
   CARGO_TERM_COLOR: always
