@@ -226,7 +226,7 @@ runs:
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: Setup cross-compilation for Python wheels (Linux ARM64)
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
