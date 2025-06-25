@@ -1,10 +1,15 @@
 # Example configuration for a Rust binary crate
 # This is suitable for CLI tools and applications with executable binaries
+# Place this file at the root of your project as "release-plz.toml"
 
 [workspace]
+# Enable automatic changelog generation
 changelog_update = true
+# Disable GitHub releases at workspace level (handled by package level)
 git_release_enable = false
+# Enable automatic tag creation (triggers release workflows for cross-platform builds)
 git_tag_enable = true
+# Enable processing for releases
 release = true
 
 [changelog]
@@ -19,10 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 """
 
 [[package]]
-name = "my-cli-tool"  # Change to your binary name
+name = "my-cli-tool"  # CHANGE THIS: Replace with your actual binary name
 changelog_update = true
 git_release_enable = true
-release = true
+release = true  # Enable crates.io publishing
 git_tag_name = "v{{version}}"
 allow_dirty = false
 semver_check = true
@@ -45,17 +50,32 @@ cargo install {{package}}
 ### Using Package Managers
 ```bash
 # Homebrew (macOS/Linux)
-brew install loonghao/tap/{{package}}
+brew install your-username/tap/{{package}}
 
 # Scoop (Windows)
-scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
+scoop bucket add your-username https://github.com/your-username/scoop-bucket
 scoop install {{package}}
 ```
 
 ## 🔗 Links
 - [Documentation](https://docs.rs/{{package}})
+- [Crates.io](https://crates.io/crates/{{package}})
 - [Examples](https://github.com/{{owner}}/{{package}}/tree/main/examples)
 - [Changelog](https://github.com/{{owner}}/{{package}}/blob/main/CHANGELOG.md)
 
 **Full Changelog**: https://github.com/{{owner}}/{{package}}/compare/{{previous_tag}}...{{version}}
 """
+
+# Required secrets for this configuration:
+# - CARGO_REGISTRY_TOKEN: Your crates.io API token
+# - GITHUB_TOKEN: Automatically provided by GitHub
+# - RELEASE_PLZ_TOKEN: Optional GitHub PAT for enhanced features
+
+# Required workflows for binary releases:
+# - .github/workflows/release-plz.yml: Handles version management and GitHub releases
+# - .github/workflows/release.yml: Builds cross-platform binaries when tags are created
+
+# Your Cargo.toml should have a [[bin]] section:
+# [[bin]]
+# name = "my-cli-tool"
+# path = "src/main.rs"

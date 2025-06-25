@@ -10,24 +10,35 @@ on:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v1
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
-      # Optional: Specify binary name (auto-detected if not provided)
+      # Optional: Specify binary name (auto-detected from Cargo.toml if not provided)
       binary-name: ""
-      # Optional: Enable/disable Python wheels
+      # Optional: Enable/disable Python wheels (default: true)
+      # Only builds wheels if pyproject.toml exists
       enable-python-wheels: true
       # Optional: Customize target platforms (JSON array)
+      # Default includes common platforms for Linux, macOS, Windows (x86_64 + ARM64)
       target-platforms: |
         [
           {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
           {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
           {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
           {"target": "x86_64-apple-darwin", "os": "macos-13"},
           {"target": "aarch64-apple-darwin", "os": "macos-13"},
-          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"}
+          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"},
+          {"target": "aarch64-pc-windows-msvc", "os": "windows-2022"}
         ]
     secrets:
       # Required: For GitHub release uploads
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# This reusable workflow:
+# 1. Builds binaries for all specified target platforms
+# 2. Uploads binaries to the GitHub release (created by release-plz)
+# 3. Builds Python wheels if pyproject.toml exists
+# 4. Handles cross-compilation automatically
+# 5. Creates appropriate archives (.tar.gz for Unix, .zip for Windows)

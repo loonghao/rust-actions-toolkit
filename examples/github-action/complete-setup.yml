@@ -1,9 +1,14 @@
 # Example: Complete setup with CI, release-plz, and releases
 # This shows how to use the GitHub Action for a complete Rust project setup
 
-# .github/workflows/ci.yml
+# File: .github/workflows/ci.yml
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -12,28 +17,61 @@ jobs:
       - uses: loonghao/rust-actions-toolkit@v1
         with:
           command: ci
+          rust-toolchain: stable
+
+  # Optional: Code coverage (only on PRs to avoid noise)
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: setup
+          rust-toolchain: stable
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
 
 ---
-# .github/workflows/release-plz.yml
+# File: .github/workflows/release-plz.yml
 name: Release-plz
 on:
   push:
     branches: [main]
+
 jobs:
   release:
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v1
     secrets:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Optional: Enhanced GitHub PAT for cross-workflow triggers
+      RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
 ---
-# .github/workflows/release.yml
+# File: .github/workflows/release.yml
 name: Release
 on:
   push:
     tags: ["v*"]
+
 jobs:
+  # Use reusable workflow for comprehensive cross-platform releases
   release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v1
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Alternative: Use GitHub Action for custom matrix
+  custom-release:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -55,3 +93,5 @@ jobs:
           command: release
           target: ${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          binary-name: ""  # Auto-detect from Cargo.toml
+          enable-python-wheels: true  # Enable if you have pyproject.toml

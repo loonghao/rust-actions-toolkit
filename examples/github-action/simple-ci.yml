@@ -10,7 +10,7 @@ on:
     branches: [main]
 
 jobs:
-  # All-in-one CI job
+  # All-in-one CI job - handles formatting, clippy, docs, and basic testing
   ci:
     name: Rust CI
     runs-on: ubuntu-latest
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Rust CI
+      - name: Run comprehensive Rust CI
         uses: loonghao/rust-actions-toolkit@v1
         with:
           command: ci
@@ -26,9 +26,10 @@ jobs:
           check-format: true
           check-clippy: true
           check-docs: true
+          clippy-args: '--all-targets --all-features -- -D warnings'
 
-  # Cross-platform testing
-  test:
+  # Optional: Cross-platform testing for libraries that need it
+  cross-platform-test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -38,7 +39,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: Setup Rust (without checks)
         uses: loonghao/rust-actions-toolkit@v1
         with:
           command: setup
@@ -46,3 +47,16 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose --workspace
+
+  # Optional: Security audit
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run security audit
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

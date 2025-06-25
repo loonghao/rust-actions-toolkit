@@ -9,20 +9,33 @@ on:
   push:
     branches: [main, develop]
   schedule:
-    - cron: '00 01 * * *'  # Daily at 1 AM UTC
+    - cron: '00 01 * * *'  # Daily at 1 AM UTC (optional)
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
-      # Optional: Disable coverage for faster CI
+      # Optional: Enable/disable coverage reporting (default: true)
       enable-coverage: true
-      # Optional: Disable Python wheel testing
+      # Optional: Enable/disable Python wheel testing (default: true)
+      # Only runs if pyproject.toml exists
       enable-python-wheel: true
-      # Optional: Specify cross version
+      # Optional: Specify cross version for cross-compilation
       cross-version: v0.2.5
+      # Optional: Add additional target platforms (JSON array)
+      additional-targets: '[]'
     secrets:
       # Optional: For code coverage reporting
+      # Get this token from https://codecov.io/
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+# This reusable workflow includes:
+# - Code formatting check (cargo fmt)
+# - Linting (cargo clippy)
+# - Documentation check (cargo doc)
+# - Cross-platform testing
+# - Security audit (cargo audit)
+# - Code coverage (cargo llvm-cov)
+# - Python wheel testing (if pyproject.toml exists)
