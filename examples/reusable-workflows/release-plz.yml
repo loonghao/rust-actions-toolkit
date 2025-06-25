@@ -1,0 +1,25 @@
+# Example: Using reusable release-plz workflow
+# Place this file at .github/workflows/release-plz.yml in your project
+
+name: Release-plz
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@main
+    with:
+      # Optional: Customize Rust toolchain
+      rust-toolchain: stable
+      # Optional: Specify release-plz version
+      release-plz-version: v0.5
+    secrets:
+      # Required: For crates.io publishing
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      # Required: For GitHub operations
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Optional: Enhanced GitHub PAT for cross-workflow triggers
+      RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}

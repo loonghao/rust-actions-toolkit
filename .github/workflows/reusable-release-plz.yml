@@ -1,17 +1,35 @@
-name: Release-plz
+name: Reusable Release-plz
 
-# Universal release-plz workflow for Rust projects
-# Handles automatic version management, changelog generation, and crates.io publishing
-# Works with pure crates, binary crates, and Python wheel projects
+# Reusable workflow for release-plz automation
+# Can be called from other repositories
+
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        description: 'Rust toolchain version'
+        required: false
+        type: string
+        default: 'stable'
+      release-plz-version:
+        description: 'Release-plz action version'
+        required: false
+        type: string
+        default: 'v0.5'
+    secrets:
+      RELEASE_PLZ_TOKEN:
+        description: 'GitHub PAT for release automation (optional, falls back to GITHUB_TOKEN)'
+        required: false
+      CARGO_REGISTRY_TOKEN:
+        description: 'Cargo registry token for crates.io publishing'
+        required: true
+      GITHUB_TOKEN:
+        description: 'GitHub token'
+        required: true
 
 permissions:
   pull-requests: write
   contents: write
-
-on:
-  push:
-    branches:
-      - main
 
 jobs:
   # Release unpublished packages to crates.io
@@ -31,10 +49,12 @@ jobs:
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5
+        uses: release-plz/action@${{ inputs.release-plz-version }}
         with:
           command: release
         env:
@@ -63,10 +83,12 @@ jobs:
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5
+        uses: release-plz/action@${{ inputs.release-plz-version }}
         with:
           command: release-pr
         env:

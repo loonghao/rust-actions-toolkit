@@ -1,0 +1,106 @@
+name: 'Rust Release'
+description: 'Build and upload Rust binaries and Python wheels for releases'
+author: 'loonghao'
+
+inputs:
+  toolchain:
+    description: 'Rust toolchain version'
+    required: false
+    default: 'stable'
+  target:
+    description: 'Target platform'
+    required: true
+  binary-name:
+    description: 'Binary name to release (auto-detected if not specified)'
+    required: false
+    default: ''
+  enable-python-wheels:
+    description: 'Enable Python wheel building'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'GitHub token for release uploads'
+    required: true
+
+outputs:
+  binary-path:
+    description: 'Path to the built binary'
+    value: ${{ steps.build-binary.outputs.binary-path }}
+  wheel-path:
+    description: 'Path to the built Python wheel'
+    value: ${{ steps.build-wheel.outputs.wheel-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        targets: ${{ inputs.target }}
+
+    - name: Setup cross-compilation toolchain
+      uses: taiki-e/setup-cross-toolchain-action@v1
+      with:
+        target: ${{ inputs.target }}
+      if: runner.os == 'Linux' && !contains(inputs.target, '-musl')
+
+    - name: Install cross for musl targets
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cross
+      if: contains(inputs.target, '-musl')
+
+    - name: Configure Windows static linking
+      shell: bash
+      run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+      if: endsWith(inputs.target, 'windows-msvc')
+
+    - name: Build and upload binary
+      id: build-binary
+      uses: taiki-e/upload-rust-binary-action@v1
+      with:
+        bin: ${{ inputs.binary-name }}
+        target: ${{ inputs.target }}
+        tar: all
+        zip: windows
+        token: ${{ inputs.github-token }}
+
+    - name: Set up Python
+      if: inputs.enable-python-wheels == 'true' && hashFiles('pyproject.toml') != ''
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Setup cross-compilation for Python wheels (Linux ARM64)
+      if: inputs.enable-python-wheels == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+    - name: Install maturin
+      if: inputs.enable-python-wheels == 'true' && hashFiles('pyproject.toml') != ''
+      shell: bash
+      run: pip install maturin[patchelf]
+
+    - name: Build Python wheels
+      id: build-wheel
+      if: inputs.enable-python-wheels == 'true' && hashFiles('pyproject.toml') != ''
+      shell: bash
+      run: |
+        maturin build --release --target ${{ inputs.target }}
+        wheel_path=$(find target/wheels -name "*.whl" | head -1)
+        echo "wheel-path=$wheel_path" >> $GITHUB_OUTPUT
+
+    - name: Upload wheels to release
+      if: inputs.enable-python-wheels == 'true' && hashFiles('pyproject.toml') != '' && steps.build-wheel.outputs.wheel-path != ''
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ steps.build-wheel.outputs.wheel-path }}
+        token: ${{ inputs.github-token }}
+
+branding:
+  icon: 'package'
+  color: 'blue'

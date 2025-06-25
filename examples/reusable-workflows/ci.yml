@@ -1,0 +1,28 @@
+# Example: Using reusable CI workflow
+# Place this file at .github/workflows/ci.yml in your project
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '00 01 * * *'  # Daily at 1 AM UTC
+
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
+    with:
+      # Optional: Customize Rust toolchain
+      rust-toolchain: stable
+      # Optional: Disable coverage for faster CI
+      enable-coverage: true
+      # Optional: Disable Python wheel testing
+      enable-python-wheel: true
+      # Optional: Specify cross version
+      cross-version: v0.2.5
+    secrets:
+      # Optional: For code coverage reporting
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

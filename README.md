@@ -21,9 +21,73 @@
 
 ## 🚀 Quick Start
 
-### 1. Copy Workflow Files
+Choose one of three ways to use this toolkit:
 
-Copy the workflow files to your Rust project:
+### Method 1: Reusable Workflows (Recommended) 🌟
+
+Create simple workflow files that call our reusable workflows:
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+```
+
+```yaml
+# .github/workflows/release-plz.yml
+name: Release-plz
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@main
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+```yaml
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Method 2: Composite Actions
+
+Use our actions in your existing workflows:
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit/actions/setup-rust-ci@main
+        with:
+          toolchain: stable
+          check-format: true
+          check-clippy: true
+```
+
+### Method 3: Copy Files (Full Control)
+
+Copy and customize the workflow files:
 
 ```bash
 # Create .github/workflows directory
@@ -36,31 +100,15 @@ curl -o .github/workflows/release.yml https://raw.githubusercontent.com/loonghao
 curl -o release-plz.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/release-plz.toml
 ```
 
-### 2. Configure for Your Project
+## ⚙️ Configuration
 
-Edit `release-plz.toml` and update the package name:
-
-```toml
-[[package]]
-name = "your-package-name"  # Change this to your actual package name
-# ... rest of configuration
-```
-
-### 3. Set Up Secrets
+### Required Secrets
 
 Add these secrets to your GitHub repository:
 
 - `CARGO_REGISTRY_TOKEN` - Your crates.io API token
 - `CODECOV_TOKEN` - Your Codecov token (optional)
 - `RELEASE_PLZ_TOKEN` - GitHub PAT for release automation (optional)
-
-### 4. Update Repository Owner
-
-In `release-plz.yml`, update the repository owner check:
-
-```yaml
-if: ${{ github.repository_owner == 'your-username' }}
-```
 
 ## 📋 Project Types
 

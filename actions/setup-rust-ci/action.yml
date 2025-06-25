@@ -1,0 +1,82 @@
+name: 'Setup Rust CI'
+description: 'Setup Rust toolchain and run common CI checks'
+author: 'loonghao'
+
+inputs:
+  toolchain:
+    description: 'Rust toolchain version'
+    required: false
+    default: 'stable'
+  components:
+    description: 'Additional components to install (comma-separated)'
+    required: false
+    default: 'rustfmt,clippy'
+  targets:
+    description: 'Additional targets to install (comma-separated)'
+    required: false
+    default: ''
+  check-format:
+    description: 'Run cargo fmt --check'
+    required: false
+    default: 'true'
+  check-clippy:
+    description: 'Run cargo clippy'
+    required: false
+    default: 'true'
+  check-docs:
+    description: 'Run cargo doc'
+    required: false
+    default: 'true'
+  clippy-args:
+    description: 'Additional arguments for clippy'
+    required: false
+    default: '--all-targets --all-features -- -D warnings'
+
+outputs:
+  rust-version:
+    description: 'Installed Rust version'
+    value: ${{ steps.rust-version.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    - name: Get Rust version
+      id: rust-version
+      shell: bash
+      run: |
+        version=$(rustc --version)
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "Installed Rust: $version"
+
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: "rust-ci-cache"
+
+    - name: Check formatting
+      if: inputs.check-format == 'true'
+      shell: bash
+      run: cargo fmt --all --check
+
+    - name: Run clippy
+      if: inputs.check-clippy == 'true'
+      shell: bash
+      run: cargo clippy ${{ inputs.clippy-args }}
+
+    - name: Check documentation
+      if: inputs.check-docs == 'true'
+      shell: bash
+      env:
+        RUSTDOCFLAGS: -D warnings
+      run: cargo doc --no-deps --document-private-items --workspace
+
+branding:
+  icon: 'check-circle'
+  color: 'orange'
