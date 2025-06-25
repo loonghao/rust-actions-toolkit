@@ -1,0 +1,61 @@
+# Example configuration for a Rust binary crate
+# This is suitable for CLI tools and applications with executable binaries
+
+[workspace]
+changelog_update = true
+git_release_enable = false
+git_tag_enable = true
+release = true
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+"""
+
+[[package]]
+name = "my-cli-tool"  # Change to your binary name
+changelog_update = true
+git_release_enable = true
+release = true
+git_tag_name = "v{{version}}"
+allow_dirty = false
+semver_check = true
+git_release_draft = false
+git_release_body = """
+## 🚀 What's Changed
+
+{{changelog}}
+
+## 📦 Installation
+
+### Download Binary
+Download the appropriate binary for your platform from the assets below.
+
+### Using Cargo
+```bash
+cargo install {{package}}
+```
+
+### Using Package Managers
+```bash
+# Homebrew (macOS/Linux)
+brew install loonghao/tap/{{package}}
+
+# Scoop (Windows)
+scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
+scoop install {{package}}
+```
+
+## 🔗 Links
+- [Documentation](https://docs.rs/{{package}})
+- [Examples](https://github.com/{{owner}}/{{package}}/tree/main/examples)
+- [Changelog](https://github.com/{{owner}}/{{package}}/blob/main/CHANGELOG.md)
+
+**Full Changelog**: https://github.com/{{owner}}/{{package}}/compare/{{previous_tag}}...{{version}}
+"""

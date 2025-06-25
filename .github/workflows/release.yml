@@ -1,0 +1,138 @@
+name: Release
+
+# Universal release workflow for Rust projects
+# Triggered by release-plz when it creates a tag
+# Supports: binary releases, Python wheels, cross-platform compilation
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# We need this to be able to create releases.
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTFLAGS: -D warnings
+
+jobs:
+  # Upload binary assets for projects with binaries
+  upload-binary-assets:
+    name: Upload binary assets
+    # Only run if this is a version tag (not other packages in workspace)
+    if: startsWith(github.ref_name, 'v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux targets
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-22.04
+          # macOS targets
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-13
+          # Windows targets
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
+          - target: aarch64-pc-windows-msvc
+            os: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup cross-compilation toolchain
+        uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.target }}
+        if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
+
+      - name: Install cross for musl targets
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+        if: contains(matrix.target, '-musl')
+
+      - name: Configure Windows static linking
+        run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+        if: endsWith(matrix.target, 'windows-msvc')
+
+      # Auto-detect binary name from Cargo.toml
+      - name: Upload binary assets
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          # This will auto-detect the binary name from Cargo.toml
+          # For projects with multiple binaries, specify: bin: binary1,binary2
+          target: ${{ matrix.target }}
+          tar: all
+          zip: windows
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and upload Python wheels (conditional)
+  upload-python-wheels:
+    name: Upload Python wheels
+    # Only run if pyproject.toml exists (Python wheel project)
+    if: startsWith(github.ref_name, 'v') && hashFiles('pyproject.toml') != ''
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux wheels
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          # macOS wheels
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          # Windows wheels
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup cross-compilation (Linux)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Install maturin
+        run: pip install maturin[patchelf]
+
+      - name: Build Python wheels
+        run: maturin build --release --target ${{ matrix.target }}
+
+      - name: Upload wheels to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/wheels/*.whl
+          token: ${{ secrets.GITHUB_TOKEN }}
