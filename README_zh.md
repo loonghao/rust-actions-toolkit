@@ -3,102 +3,93 @@
 [![CI](https://github.com/loonghao/rust-actions-toolkit/workflows/CI/badge.svg)](https://github.com/loonghao/rust-actions-toolkit/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/loonghao/rust-actions-toolkit.svg)](https://github.com/loonghao/rust-actions-toolkit/releases)
+[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue.svg)](https://github.com/marketplace/actions/rust-actions-toolkit)
 
-> 🚀 Rust 项目的通用 GitHub Actions 工具包 - CI/CD、跨平台构建、发布和 Python wheels
+> 🚀 Rust 项目的通用 GitHub Actions 工具包，支持 CI/CD、跨平台构建、发布和 Python wheels
 
 [中文文档](README_zh.md) | [English](README.md)
 
 ## ✨ 特性
 
-- ✅ **纯 Rust crate** - 库 crate 的完整 CI/CD
-- ✅ **二进制发布** - 跨平台编译和分发
-- ✅ **Python wheels** - 使用 maturin 的 Rust + Python 集成
-- ✅ **全面的 CI** - 代码质量、测试、安全、覆盖率
-- ✅ **自动化发布** - 使用 release-plz 的版本管理
-- ✅ **跨平台** - Linux、macOS、Windows（x86_64 + ARM64）
-- ✅ **安全审计** - 自动化漏洞扫描
-- ✅ **代码覆盖** - Codecov 集成
+- **🔍 代码质量**: 自动化格式检查、代码检查和文档检查
+- **🧪 测试**: 在 Linux、macOS 和 Windows 上进行跨平台测试
+- **🔒 安全**: 使用 cargo-audit 进行自动化漏洞扫描
+- **📊 覆盖率**: 与 Codecov 集成的代码覆盖率报告
+- **🚀 发布**: 跨平台二进制发布和自动上传
+- **🐍 Python**: Python wheel 构建和分发
+- **📦 发布**: 使用 release-plz 自动发布到 crates.io
 
 ## 🚀 快速开始
 
-### 1. 复制工作流文件
-
-将工作流文件复制到你的 Rust 项目：
-
-```bash
-# 创建 .github/workflows 目录
-mkdir -p .github/workflows
-
-# 复制工作流文件
-curl -o .github/workflows/ci.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/ci.yml
-curl -o .github/workflows/release-plz.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/release-plz.yml
-curl -o .github/workflows/release.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/release.yml
-curl -o release-plz.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/release-plz.toml
-```
-
-### 2. 为你的项目配置
-
-编辑 `release-plz.toml` 并更新包名：
-
-```toml
-[[package]]
-name = "your-package-name"  # 改为你的实际包名
-# ... 其余配置
-```
-
-### 3. 设置密钥
-
-在你的 GitHub 仓库中添加这些密钥：
-
-- `CARGO_REGISTRY_TOKEN` - 你的 crates.io API token
-- `CODECOV_TOKEN` - 你的 Codecov token（可选）
-- `RELEASE_PLZ_TOKEN` - 用于发布自动化的 GitHub PAT（可选）
-
-### 4. 更新仓库所有者
-
-在 `release-plz.yml` 中，更新仓库所有者检查：
+### 简单的 CI 设置
 
 ```yaml
-if: ${{ github.repository_owner == 'your-username' }}
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: ci
 ```
 
-## 📋 项目类型
+### 跨平台发布
 
-### 纯 Rust Crate
-
-对于没有二进制文件的库 crate：
-
-1. 使用默认配置
-2. 如需要，从 `release.yml` 中移除二进制相关部分
-3. 专注于 `cargo test` 和文档
-
-### 二进制 Crate
-
-对于有可执行二进制文件的项目：
-
-1. 确保你的 `Cargo.toml` 有 `[[bin]]` 部分
-2. `upload-rust-binary-action` 会自动检测二进制名称
-3. 跨平台二进制文件会自动构建
-
-### Python Wheel 项目
-
-对于有 Python 绑定的 Rust 项目：
-
-1. 在项目中添加 `pyproject.toml`
-2. 使用 maturin 进行 Python 集成
-3. 当存在 `pyproject.toml` 时会自动构建 Python wheels
-
-示例 `pyproject.toml`：
-
-```toml
-[build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
-
-[project]
-name = "your-python-package"
-requires-python = ">=3.8"
+```yaml
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+## 📋 输入参数
+
+| 输入 | 描述 | 必需 | 默认值 |
+|------|------|------|--------|
+| `command` | 运行的命令：`ci`、`release` 或 `setup` | 是 | `ci` |
+| `rust-toolchain` | Rust 工具链版本 | 否 | `stable` |
+| `check-format` | 运行 cargo fmt --check（ci 命令） | 否 | `true` |
+| `check-clippy` | 运行 cargo clippy（ci 命令） | 否 | `true` |
+| `check-docs` | 运行 cargo doc（ci 命令） | 否 | `true` |
+| `target` | 发布的目标平台 | 否 | 自动检测 |
+| `binary-name` | 要发布的二进制名称 | 否 | 自动检测 |
+| `github-token` | 用于上传的 GitHub token | 否 | `${{ github.token }}` |
+
+## 📤 输出
+
+| 输出 | 描述 |
+|------|------|
+| `rust-version` | 安装的 Rust 版本 |
+| `binary-path` | 构建的二进制文件路径（release 命令） |
+| `wheel-path` | 构建的 Python wheel 路径（release 命令） |
+
+## 🎯 支持的项目类型
+
+- **纯 Rust Crate**: 发布到 crates.io 的库项目
+- **二进制 Crate**: 带跨平台发布的 CLI 工具
+- **Python Wheels**: 使用 maturin 的 Rust + Python 绑定项目
 
 ## 🔧 配置
 

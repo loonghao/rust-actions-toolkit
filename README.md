@@ -3,29 +3,168 @@
 [![CI](https://github.com/loonghao/rust-actions-toolkit/workflows/CI/badge.svg)](https://github.com/loonghao/rust-actions-toolkit/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/loonghao/rust-actions-toolkit.svg)](https://github.com/loonghao/rust-actions-toolkit/releases)
+[![Marketplace](https://img.shields.io/badge/GitHub-Marketplace-blue.svg)](https://github.com/marketplace/actions/rust-actions-toolkit)
 
-> 🚀 Universal GitHub Actions toolkit for Rust projects - CI/CD, cross-platform builds, releases, and Python wheels
+> 🚀 Universal GitHub Actions toolkit for Rust projects with support for CI/CD, cross-platform builds, releases, and Python wheels
 
 [中文文档](README_zh.md) | [English](README.md)
 
 ## ✨ Features
 
-- ✅ **Pure Rust crates** - Complete CI/CD for library crates
-- ✅ **Binary releases** - Cross-platform compilation and distribution
-- ✅ **Python wheels** - Rust + Python integration with maturin
-- ✅ **Comprehensive CI** - Code quality, testing, security, coverage
-- ✅ **Automated releases** - Version management with release-plz
-- ✅ **Cross-platform** - Linux, macOS, Windows (x86_64 + ARM64)
-- ✅ **Security auditing** - Automated vulnerability scanning
-- ✅ **Code coverage** - Codecov integration
+- **🔍 Code Quality**: Automated formatting, linting, and documentation checks
+- **🧪 Testing**: Cross-platform testing on Linux, macOS, and Windows
+- **🔒 Security**: Automated vulnerability scanning with cargo-audit
+- **📊 Coverage**: Code coverage reporting with Codecov integration
+- **🚀 Releases**: Cross-platform binary releases with automated uploads
+- **🐍 Python**: Python wheel building and distribution
+- **📦 Publishing**: Automated crates.io publishing with release-plz
 
 ## 🚀 Quick Start
 
-Choose one of four ways to use this toolkit:
+### Simple CI Setup
 
-### Method 1: GitHub Action (Easiest) 🌟
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: ci
+```
 
-Use the published GitHub Action directly:
+### Cross-Platform Releases
+
+```yaml
+name: Release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## 📋 Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `command` | Command to run: `ci`, `release`, or `setup` | Yes | `ci` |
+| `rust-toolchain` | Rust toolchain version | No | `stable` |
+| `check-format` | Run cargo fmt --check (ci command) | No | `true` |
+| `check-clippy` | Run cargo clippy (ci command) | No | `true` |
+| `check-docs` | Run cargo doc (ci command) | No | `true` |
+| `target` | Target platform for release | No | Auto-detect |
+| `binary-name` | Binary name to release | No | Auto-detect |
+| `github-token` | GitHub token for uploads | No | `${{ github.token }}` |
+
+## 📤 Outputs
+
+| Output | Description |
+|--------|-------------|
+| `rust-version` | Installed Rust version |
+| `binary-path` | Path to built binary (release command) |
+| `wheel-path` | Path to built Python wheel (release command) |
+
+## 🎯 Supported Project Types
+
+- **Pure Rust Crates**: Library projects published to crates.io
+- **Binary Crates**: CLI tools with cross-platform releases
+- **Python Wheels**: Rust projects with Python bindings using maturin
+
+## 🔧 Advanced Usage
+
+### Custom Clippy Configuration
+
+```yaml
+- uses: loonghao/rust-actions-toolkit@v1
+  with:
+    command: ci
+    clippy-args: '--all-targets --all-features -- -D warnings -D clippy::pedantic'
+```
+
+### Python Wheel Projects
+
+For projects with `pyproject.toml`, Python wheels are automatically built:
+
+```yaml
+- uses: loonghao/rust-actions-toolkit@v1
+  with:
+    command: release
+    target: x86_64-unknown-linux-gnu
+    enable-python-wheels: true
+```
+
+## 🏷️ Versioning
+
+Use specific versions for stability:
+
+```yaml
+- uses: loonghao/rust-actions-toolkit@v1.0.0  # Specific version
+- uses: loonghao/rust-actions-toolkit@v1      # Major version
+- uses: loonghao/rust-actions-toolkit@main    # Latest (not recommended for production)
+```
+
+## 🔄 Alternative Usage Methods
+
+### Reusable Workflows
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+```
+
+### Composite Actions
+
+```yaml
+- uses: loonghao/rust-actions-toolkit/actions/setup-rust-ci@v1
+  with:
+    toolchain: stable
+    check-format: true
+```
+
+### Copy Files (Full Control)
+
+```bash
+curl -o .github/workflows/ci.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/ci.yml
+```
+
+## ⚙️ Required Secrets
+
+Add these secrets to your GitHub repository:
+
+- `CARGO_REGISTRY_TOKEN` - Your crates.io API token
+- `CODECOV_TOKEN` - Your Codecov token (optional)
+- `RELEASE_PLZ_TOKEN` - GitHub PAT for release automation (optional)
+
+## 💡 Complete Examples
+
+### Pure Rust Library
 
 ```yaml
 # .github/workflows/ci.yml
@@ -41,6 +180,8 @@ jobs:
           command: ci
           rust-toolchain: stable
 ```
+
+### CLI Tool with Releases
 
 ```yaml
 # .github/workflows/release.yml
@@ -69,120 +210,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### Method 2: Reusable Workflows
-
-Create simple workflow files that call our reusable workflows:
-
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [push, pull_request]
-jobs:
-  ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-```
-
-```yaml
-# .github/workflows/release-plz.yml
-name: Release-plz
-on:
-  push:
-    branches: [main]
-jobs:
-  release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@main
-    secrets:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-```yaml
-# .github/workflows/release.yml
-name: Release
-on:
-  push:
-    tags: ["v*"]
-jobs:
-  release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Method 3: Composite Actions
-
-Use our actions in your existing workflows:
-
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [push, pull_request]
-jobs:
-  ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit/actions/setup-rust-ci@main
-        with:
-          toolchain: stable
-          check-format: true
-          check-clippy: true
-```
-
-### Method 4: Copy Files (Full Control)
-
-Copy and customize the workflow files:
-
-```bash
-# Create .github/workflows directory
-mkdir -p .github/workflows
-
-# Copy workflow files
-curl -o .github/workflows/ci.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/ci.yml
-curl -o .github/workflows/release-plz.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/release-plz.yml
-curl -o .github/workflows/release.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/release.yml
-curl -o release-plz.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/release-plz.toml
-```
-
-## ⚙️ Configuration
-
-### Required Secrets
-
-Add these secrets to your GitHub repository:
-
-- `CARGO_REGISTRY_TOKEN` - Your crates.io API token
-- `CODECOV_TOKEN` - Your Codecov token (optional)
-- `RELEASE_PLZ_TOKEN` - GitHub PAT for release automation (optional)
-
-## 📋 Project Types
-
-### Pure Rust Crate
-
-For library crates without binaries:
-
-1. Use the default configuration
-2. Remove binary-specific sections from `release.yml` if needed
-3. Focus on `cargo test` and documentation
-
-### Binary Crate
-
-For projects with executable binaries:
-
-1. Ensure your `Cargo.toml` has a `[[bin]]` section
-2. The `upload-rust-binary-action` will auto-detect binary names
-3. Cross-platform binaries will be built automatically
-
 ### Python Wheel Project
 
-For Rust projects with Python bindings:
-
-1. Add `pyproject.toml` to your project
-2. Use maturin for Python integration
-3. Python wheels will be built automatically when `pyproject.toml` exists
-
-Example `pyproject.toml`:
+Just add a `pyproject.toml` file and wheels will be built automatically:
 
 ```toml
 [build-system]
@@ -194,65 +224,25 @@ name = "your-python-package"
 requires-python = ">=3.8"
 ```
 
-## 🔧 Configuration
+## 🎯 Real-World Projects
 
-### CI Workflow (`ci.yml`)
-
-The CI workflow includes:
-
-- **Code formatting** - `cargo fmt --check`
-- **Linting** - `cargo clippy`
-- **Documentation** - `cargo doc`
-- **Testing** - Cross-platform testing
-- **Security audit** - `cargo audit`
-- **Code coverage** - `cargo llvm-cov` (PR only)
-- **Python wheels** - Conditional testing
-
-### Release Workflow (`release.yml`)
-
-The release workflow supports:
-
-- **Binary releases** - Cross-platform compilation
-- **Python wheels** - Multi-platform wheel building
-- **Asset uploads** - Automatic GitHub release assets
-
-### Release-plz (`release-plz.yml`)
-
-Automated version management:
-
-- **Version bumping** - Semantic versioning
-- **Changelog generation** - Automatic changelog
-- **Crates.io publishing** - Automated publishing
-- **GitHub releases** - Release creation
-
-## 🎯 Supported Projects
-
-This toolkit is designed for projects like:
+This toolkit is used by projects like:
 
 - **vx shimexe** - Binary tools
 - **py2pyd** - Python wheel projects
 - **rez-tools** - CLI utilities
 - **rez-core** - Core libraries
 
-## 📚 Examples
+## 📚 Documentation
 
-See the `examples/` directory for complete project setups:
-
-- `pure-crate/` - Library crate example
-- `binary-crate/` - CLI tool example
-- `python-wheel/` - Python binding example
+- [Usage Guide](USAGE.md) - Detailed usage instructions
+- [Examples](examples/) - Complete project setups
+- [Contributing](CONTRIBUTING.md) - How to contribute
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md).
+Contributions welcome! See our [Contributing Guide](CONTRIBUTING.md).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [release-plz Documentation](https://release-plz.ieni.dev/)
-- [Maturin Documentation](https://www.maturin.rs/)
-- [Cross Compilation Guide](https://rust-lang.github.io/rustup/cross-compilation.html)
+MIT License - see [LICENSE](LICENSE) for details.
