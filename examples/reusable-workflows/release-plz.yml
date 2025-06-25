@@ -15,7 +15,7 @@ jobs:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
       # Optional: Specify release-plz version
-      release-plz-version: v0.5
+      release_plz_version: v0.5
     secrets:
       # Required: For crates.io publishing (if you publish Rust crates)
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

@@ -1,0 +1,71 @@
+# Example: Using GitHub Action for release-plz automation
+# Place this file at .github/workflows/release-plz.yml in your project
+
+name: Release-plz
+
+on:
+  push:
+    branches:
+      - main
+  # Optional: Manual trigger
+  workflow_dispatch:
+
+jobs:
+  release-plz:
+    name: Release-plz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run release-plz
+        uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release-plz
+          # Optional: Customize Rust toolchain
+          rust-toolchain: stable
+          # Optional: Specify release-plz version
+          release-plz-version: v0.5
+          # Optional: Control what release-plz does
+          release-plz-command: both  # release, release-pr, or both
+          # Required: Cargo registry token for publishing
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          # Optional: Enhanced GitHub PAT for cross-workflow triggers
+          release-plz-token: ${{ secrets.RELEASE_PLZ_TOKEN }}
+
+# Alternative: Separate jobs for release and PR creation
+---
+name: Release-plz (Separate Jobs)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # Create release PR on every push to main
+  release-pr:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release-plz
+          release-plz-command: release-pr
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # Publish releases when tags are pushed
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release-plz
+          release-plz-command: release
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+# Note: You also need a release-plz.toml file in your project root
+# See examples/pure-crate/release-plz.toml for a template

@@ -4,7 +4,7 @@ author: 'loonghao'
 
 inputs:
   command:
-    description: 'Command to run: ci, release, or setup'
+    description: 'Command to run: ci, release, release-plz, or setup'
     required: true
     default: 'ci'
   
@@ -50,6 +50,24 @@ inputs:
     required: false
     default: ${{ github.token }}
 
+  # Release-plz specific inputs
+  cargo-registry-token:
+    description: 'Cargo registry token for crates.io publishing (release-plz command)'
+    required: false
+    default: ''
+  release-plz-version:
+    description: 'Release-plz action version (release-plz command)'
+    required: false
+    default: 'v0.5'
+  release-plz-token:
+    description: 'Enhanced GitHub PAT for cross-workflow triggers (release-plz command)'
+    required: false
+    default: ''
+  release-plz-command:
+    description: 'Release-plz command: release, release-pr, or both (release-plz command)'
+    required: false
+    default: 'both'
+
 outputs:
   rust-version:
     description: 'Installed Rust version'
@@ -60,6 +78,15 @@ outputs:
   wheel-path:
     description: 'Path to the built Python wheel (release command)'
     value: ${{ steps.release.outputs.wheel-path }}
+  release-created:
+    description: 'Whether a release was created (release-plz command)'
+    value: ${{ steps.release-plz.outputs.release-created }}
+  pr-created:
+    description: 'Whether a PR was created (release-plz command)'
+    value: ${{ steps.release-plz.outputs.pr-created }}
+  version:
+    description: 'Released version (release-plz command)'
+    value: ${{ steps.release-plz.outputs.version }}
 
 runs:
   using: 'composite'
@@ -95,6 +122,18 @@ runs:
         binary-name: ${{ inputs.binary-name }}
         enable-python-wheels: ${{ inputs.enable-python-wheels }}
         github-token: ${{ inputs.github-token }}
+
+    - name: Release-plz
+      id: release-plz
+      if: inputs.command == 'release-plz'
+      uses: ./actions/release-plz
+      with:
+        command: ${{ inputs.release-plz-command }}
+        toolchain: ${{ inputs.rust-toolchain }}
+        release_plz_version: ${{ inputs.release-plz-version }}
+        cargo_registry_token: ${{ inputs.cargo-registry-token }}
+        github_token: ${{ inputs.github-token }}
+        release_plz_token: ${{ inputs.release-plz-token }}
 
 branding:
   icon: 'package'

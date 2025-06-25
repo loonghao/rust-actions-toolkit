@@ -11,7 +11,7 @@ on:
         required: false
         type: string
         default: 'stable'
-      release-plz-version:
+      release_plz_version:
         description: 'Release-plz action version'
         required: false
         type: string
@@ -54,7 +54,7 @@ jobs:
           toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Run release-plz
-        uses: release-plz/action@${{ inputs.release-plz-version }}
+        uses: release-plz/action@${{ inputs.release_plz_version }}
         with:
           command: release
         env:
@@ -88,7 +88,7 @@ jobs:
           toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Run release-plz
-        uses: release-plz/action@${{ inputs.release-plz-version }}
+        uses: release-plz/action@${{ inputs.release_plz_version }}
         with:
           command: release-pr
         env:

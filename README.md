@@ -36,6 +36,24 @@ jobs:
           command: ci
 ```
 
+### Automated Publishing with release-plz
+
+```yaml
+name: Release-plz
+on:
+  push:
+    branches: [main]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: loonghao/rust-actions-toolkit@v1
+        with:
+          command: release-plz
+          cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+```
+
 ### Cross-Platform Releases
 
 ```yaml
@@ -269,10 +287,42 @@ This toolkit is used by projects like:
 - **rez-tools** - CLI utilities
 - **rez-core** - Core libraries
 
+## 🎯 Best Practices
+
+### **New Project? → Use GitHub Actions**
+```yaml
+- uses: loonghao/rust-actions-toolkit@v1
+  with:
+    command: ci
+```
+
+### **Need Flexibility? → Use GitHub Actions**
+```yaml
+# Mix with existing steps
+- name: Custom setup
+  run: ./setup.sh
+- uses: loonghao/rust-actions-toolkit@v1
+  with:
+    command: ci
+- name: Custom cleanup
+  run: ./cleanup.sh
+```
+
+### **Enterprise Standardization? → Use Reusable Workflows**
+```yaml
+# Enforced standards across all projects
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+```
+
+**📖 [Complete Best Practices Guide](docs/BEST_PRACTICES.md)**
+
 ## 📚 Documentation
 
+- **[Best Practices Guide](docs/BEST_PRACTICES.md)** - How to choose and use the toolkit effectively
 - [Usage Guide](USAGE.md) - Detailed usage instructions
 - [Examples](examples/) - Complete project setups
+- [OpenSSL Troubleshooting](docs/OPENSSL_TROUBLESHOOTING.md) - Resolve compilation issues
+- [GitHub Token Issues](docs/GITHUB_TOKEN_ISSUE.md) - Fix workflow permission problems
 - [Contributing](CONTRIBUTING.md) - How to contribute
 
 ## 🤝 Contributing

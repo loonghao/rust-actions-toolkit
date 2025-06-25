@@ -1,0 +1,95 @@
+name: 'Release-plz'
+description: 'Automated Rust crate releasing with release-plz - handles versioning, changelogs, and publishing'
+author: 'loonghao'
+
+inputs:
+  command:
+    description: 'Command to run: release, release-pr, or both'
+    required: false
+    default: 'both'
+  toolchain:
+    description: 'Rust toolchain version'
+    required: false
+    default: 'stable'
+  release_plz_version:
+    description: 'Release-plz action version'
+    required: false
+    default: 'v0.5'
+  cargo_registry_token:
+    description: 'Cargo registry token for crates.io publishing'
+    required: true
+  github_token:
+    description: 'GitHub token (optional, uses default if not provided)'
+    required: false
+    default: ${{ github.token }}
+  release_plz_token:
+    description: 'Enhanced GitHub PAT for cross-workflow triggers (optional)'
+    required: false
+    default: ''
+  dry_run:
+    description: 'Run in dry-run mode (no actual releases)'
+    required: false
+    default: 'false'
+
+outputs:
+  release-created:
+    description: 'Whether a release was created'
+    value: ${{ steps.release.outputs.release-created }}
+  pr-created:
+    description: 'Whether a PR was created'
+    value: ${{ steps.release-pr.outputs.pr-created }}
+  version:
+    description: 'Released version'
+    value: ${{ steps.release.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        # Use enhanced token if provided for cross-workflow triggers
+        token: ${{ inputs.release_plz_token || inputs.github_token }}
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+
+    - name: Run release-plz release
+      id: release
+      if: inputs.command == 'release' || inputs.command == 'both'
+      uses: release-plz/action@${{ inputs.release_plz_version }}
+      with:
+        command: release
+      env:
+        # Use enhanced token if provided, fallback to default
+        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
+
+    - name: Run release-plz release-pr
+      id: release-pr
+      if: inputs.command == 'release-pr' || inputs.command == 'both'
+      uses: release-plz/action@${{ inputs.release_plz_version }}
+      with:
+        command: release-pr
+      env:
+        # Use enhanced token if provided, fallback to default
+        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
+
+    - name: Output results
+      shell: bash
+      run: |
+        echo "Release-plz completed successfully!"
+        if [[ "${{ inputs.command }}" == "release" || "${{ inputs.command }}" == "both" ]]; then
+          echo "Release command executed"
+        fi
+        if [[ "${{ inputs.command }}" == "release-pr" || "${{ inputs.command }}" == "both" ]]; then
+          echo "Release PR command executed"
+        fi
+
+branding:
+  icon: 'tag'
+  color: 'green'
