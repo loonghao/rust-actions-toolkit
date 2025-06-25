@@ -1,230 +1,148 @@
 name: CI
 
-# Universal CI workflow for Rust projects
-# Supports: pure crates, binary crates, and Python wheel projects
-# Features: code quality, testing, security, coverage, cross-platform validation
+# CI workflow for rust-actions-toolkit
+# Tests the GitHub Actions toolkit itself
+# Validates action.yml files and ensures everything works correctly
 
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main, develop]
-  schedule:
-    - cron: '00 01 * * *'  # Daily at 1 AM UTC
 
 permissions:
   contents: read
   actions: read
-  security-events: write
-
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  # Pin cross version for reproducible builds
-  CROSS_VERSION: v0.2.5
 
 jobs:
-  # Code formatting check
-  rustfmt:
-    name: Rustfmt
+  # Validate GitHub Actions
+  validate-actions:
+    name: Validate Actions
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: rustfmt
+      - name: Validate main action.yml
+        run: |
+          if [ ! -f action.yml ]; then
+            echo "❌ action.yml not found"
+            exit 1
+          fi
 
-      - name: Check formatting
-        run: cargo fmt --all --check
+          # Check required fields
+          if ! grep -q "name:" action.yml; then
+            echo "❌ Missing 'name' field in action.yml"
+            exit 1
+          fi
 
-  # Clippy linting
-  clippy:
-    name: Clippy
+          if ! grep -q "description:" action.yml; then
+            echo "❌ Missing 'description' field in action.yml"
+            exit 1
+          fi
+
+          if ! grep -q "branding:" action.yml; then
+            echo "❌ Missing 'branding' field in action.yml"
+            exit 1
+          fi
+
+          echo "✅ Main action.yml validation passed"
+
+      - name: Validate composite actions
+        run: |
+          for action_dir in actions/*/; do
+            if [ -d "$action_dir" ]; then
+              action_file="${action_dir}action.yml"
+              if [ ! -f "$action_file" ]; then
+                echo "❌ Missing action.yml in $action_dir"
+                exit 1
+              fi
+
+              if ! grep -q "name:" "$action_file"; then
+                echo "❌ Missing 'name' field in $action_file"
+                exit 1
+              fi
+
+              if ! grep -q "description:" "$action_file"; then
+                echo "❌ Missing 'description' field in $action_file"
+                exit 1
+              fi
+
+              echo "✅ $action_file validation passed"
+            fi
+          done
+
+      - name: Validate reusable workflows
+        run: |
+          for workflow in .github/workflows/reusable-*.yml; do
+            if [ -f "$workflow" ]; then
+              if ! grep -q "workflow_call:" "$workflow"; then
+                echo "❌ $workflow is not a reusable workflow"
+                exit 1
+              fi
+              echo "✅ $workflow validation passed"
+            fi
+          done
+
+  # Test our composite actions
+  test-actions:
+    name: Test Actions
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Test setup-rust-ci action
+        uses: ./actions/setup-rust-ci
         with:
           toolchain: stable
-          components: clippy
+          check-format: false
+          check-clippy: false
+          check-docs: false
 
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Verify Rust installation
+        run: |
+          rustc --version
+          cargo --version
+          echo "✅ Rust toolchain installed successfully"
 
-  # Documentation check
+  # Test documentation
   docs:
-    name: Docs
+    name: Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Check documentation
-        env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --no-deps --document-private-items --workspace
-
-  # Comprehensive testing across platforms
-  test:
-    name: Test - ${{ matrix.build }}
-    runs-on: ${{ matrix.os }}
-    env:
-      CARGO: cargo
-      TARGET_FLAGS:
-      TARGET_DIR: ./target
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Stable builds
-          - build: stable
-            os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-gnu
-          - build: stable-musl
-            os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-musl
-          # Native builds
-          - build: macos
-            os: macos-latest
-            rust: stable
-            target: x86_64-apple-darwin
-          - build: win-msvc
-            os: windows-latest
-            rust: stable
-            target: x86_64-pc-windows-msvc
-          - build: win-gnu
-            os: windows-latest
-            rust: stable-x86_64-gnu
-            target: x86_64-pc-windows-gnu
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install packages (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Check README files exist
         run: |
-          # Install common dependencies for Rust projects
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libssl-dev
+          if [ ! -f README.md ]; then
+            echo "❌ README.md not found"
+            exit 1
+          fi
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: ${{ matrix.target }}
+          if [ ! -f README_zh.md ]; then
+            echo "❌ README_zh.md not found"
+            exit 1
+          fi
 
-      - name: Use Cross
-        if: matrix.os == 'ubuntu-latest' && matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu'
+          if [ ! -f USAGE.md ]; then
+            echo "❌ USAGE.md not found"
+            exit 1
+          fi
+
+          echo "✅ Documentation files found"
+
+      - name: Check examples exist
         run: |
-          dir="$RUNNER_TEMP/cross-download"
-          mkdir "$dir"
-          echo "$dir" >> $GITHUB_PATH
-          cd "$dir"
-          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
-          tar xf cross-x86_64-unknown-linux-musl.tar.gz
-          echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+          if [ ! -d examples ]; then
+            echo "❌ examples directory not found"
+            exit 1
+          fi
 
-      - name: Show command used for Cargo
-        run: |
-          echo "cargo command is: ${{ env.CARGO }}"
-          echo "target flag is: ${{ env.TARGET_FLAGS }}"
-          echo "target dir is: ${{ env.TARGET_DIR }}"
+          if [ ! -d examples/github-action ]; then
+            echo "❌ examples/github-action directory not found"
+            exit 1
+          fi
 
-      - name: Build workspace
-        run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (sans cross)
-        if: matrix.target == '' || matrix.target == 'x86_64-unknown-linux-gnu' || matrix.os != 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (with cross)
-        if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-  # Security audit using rustsec database
-  security_audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run security audit
-        uses: rustsec/audit-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Code coverage reporting (only on PR)
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-
-      - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
-          fail_ci_if_error: false
-          verbose: true
-          flags: unittests
-          name: codecov-umbrella
-
-  # Python wheel testing (conditional)
-  python-wheel:
-    name: Python Wheel Test
-    runs-on: ubuntu-latest
-    # Only run if pyproject.toml exists (Python wheel project)
-    if: hashFiles('pyproject.toml') != ''
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install maturin
-        run: pip install maturin[patchelf]
-
-      - name: Build Python wheel
-        run: maturin build --release
-
-      - name: Test Python wheel
-        run: |
-          pip install target/wheels/*.whl
-          python -c "import $(basename $(pwd) | tr '-' '_'); print('Python wheel import successful')"
+          echo "✅ Example files found"

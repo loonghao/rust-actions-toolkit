@@ -154,13 +154,49 @@ jobs:
 curl -o .github/workflows/ci.yml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/.github/workflows/ci.yml
 ```
 
-## ⚙️ Required Secrets
+## ⚙️ Setup for Your Project
+
+### Required Files
+
+To use this toolkit in your Rust project, you need:
+
+1. **Cargo.toml** - Standard Rust project file
+2. **release-plz.toml** - For automated releases (optional)
+
+### Required Secrets
 
 Add these secrets to your GitHub repository:
 
-- `CARGO_REGISTRY_TOKEN` - Your crates.io API token
-- `CODECOV_TOKEN` - Your Codecov token (optional)
-- `RELEASE_PLZ_TOKEN` - GitHub PAT for release automation (optional)
+- `CARGO_REGISTRY_TOKEN` - Your crates.io API token (for Rust crate publishing)
+- `CODECOV_TOKEN` - Your Codecov token (optional, for coverage reporting)
+- `RELEASE_PLZ_TOKEN` - GitHub PAT for release automation (optional, for enhanced features)
+
+### Automated Release Setup
+
+This toolkit uses **release-plz** for automated version management. Create a `release-plz.toml` file:
+
+```toml
+[workspace]
+changelog_update = true
+git_release_enable = false
+git_tag_enable = true
+release = true
+
+[[package]]
+name = "your-package-name"  # Change to your package name
+changelog_update = true
+git_release_enable = true
+release = true
+git_tag_name = "v{{version}}"
+git_release_draft = false
+```
+
+### How It All Works Together
+
+1. **Push to main** → `release-plz.yml` creates release PR
+2. **Merge release PR** → `release-plz.yml` creates tag and GitHub release
+3. **Tag created** → `release.yml` builds cross-platform binaries
+4. **Binaries uploaded** → Users can download from GitHub releases
 
 ## 💡 Complete Examples
 

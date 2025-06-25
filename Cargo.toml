@@ -1,0 +1,28 @@
+[package]
+name = "rust-actions-toolkit"
+version = "1.0.0"
+edition = "2021"
+description = "Universal GitHub Actions toolkit for Rust projects - CI/CD, cross-platform builds, releases, and Python wheels"
+authors = ["Hal <hal.long@outlook.com>"]
+license = "MIT"
+repository = "https://github.com/loonghao/rust-actions-toolkit"
+homepage = "https://github.com/loonghao/rust-actions-toolkit"
+documentation = "https://github.com/loonghao/rust-actions-toolkit/blob/main/README.md"
+readme = "README.md"
+keywords = ["github-actions", "ci-cd", "rust", "cross-platform", "automation"]
+categories = ["development-tools"]
+
+# This is a GitHub Actions toolkit, not a Rust library
+# We include a minimal Cargo.toml for release-plz compatibility
+# but don't publish to crates.io
+
+[dependencies]
+# No dependencies - this is just for release-plz compatibility
+
+[dev-dependencies]
+# No dev dependencies needed
+
+# Metadata for GitHub Actions
+[package.metadata.github-actions]
+marketplace = true
+branding = { icon = "package", color = "orange" }

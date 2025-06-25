@@ -1,8 +1,8 @@
 name: Release-plz
 
-# Universal release-plz workflow for Rust projects
-# Handles automatic version management, changelog generation, and crates.io publishing
-# Works with pure crates, binary crates, and Python wheel projects
+# Release-plz workflow for rust-actions-toolkit
+# Handles automatic version management, changelog generation, and GitHub releases
+# Does NOT publish to crates.io (this is a GitHub Actions toolkit, not a Rust crate)
 
 permissions:
   pull-requests: write
@@ -14,7 +14,7 @@ on:
       - main
 
 jobs:
-  # Release unpublished packages to crates.io
+  # Create GitHub releases for the Actions toolkit
   release-plz-release:
     name: Release-plz release
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
         env:
           # Use PAT to allow triggering other workflows, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          # No CARGO_REGISTRY_TOKEN needed - we don't publish to crates.io
 
   # Create a PR with the new versions and changelog, preparing the next release
   release-plz-pr:
@@ -72,4 +72,4 @@ jobs:
         env:
           # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          # No CARGO_REGISTRY_TOKEN needed - we don't publish to crates.io

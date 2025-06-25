@@ -1,32 +1,25 @@
-# Universal release-plz configuration for Rust projects
+# Release-plz configuration for rust-actions-toolkit
 #
-# This configuration supports:
-# - Pure Rust crates
-# - Binary crates with cross-platform releases
-# - Python wheel projects
-#
-# Strategy: release-plz handles crates.io publishing and creates GitHub releases,
-# while .github/workflows/release.yml builds cross-platform binaries and Python wheels.
+# This is a GitHub Actions toolkit, not a Rust crate, so we:
+# - Don't publish to crates.io (no Rust packages)
+# - Focus on GitHub releases for Action versioning
+# - Use semantic versioning for Action compatibility
 #
 # Workflow:
 # 1. release-plz creates tag (v1.0.0) and GitHub release with changelog
-# 2. Tag triggers release.yml workflow for cross-platform builds
-# 3. upload-rust-binary-action builds and uploads binaries to the existing release
-# 4. For Python projects, maturin builds and uploads wheels
-# 5. release-plz publishes to crates.io
-#
-# This approach leverages release-plz's strengths (version management, changelog, crates.io)
-# while using specialized tools for cross-platform builds and Python wheels.
+# 2. Tag triggers publish-action.yml workflow for GitHub Marketplace
+# 3. Major version tag (v1) is created/updated automatically
+# 4. Users can reference @v1, @v1.0.0, etc.
 
 [workspace]
 # Enable automatic changelog generation
 changelog_update = true
 # Disable GitHub releases at workspace level (handled by package level)
 git_release_enable = false
-# Enable automatic tag creation (triggers release.yml)
+# Enable automatic tag creation (triggers publish-action.yml)
 git_tag_enable = true
-# Enable processing for releases
-release = true
+# Disable crates.io publishing (this is not a Rust crate)
+release = false
 
 # Changelog configuration
 [changelog]
@@ -40,95 +33,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 """
 
-# Default package configuration
-# Copy and customize this section for each package in your workspace
+# GitHub Actions toolkit configuration
 [[package]]
-# CUSTOMIZE: Change this to your main package name
-name = "your-package-name"
+# This represents the GitHub Action itself (not a Rust package)
+name = "rust-actions-toolkit"
 # Enable changelog updates
 changelog_update = true
-# Enable GitHub releases (release-plz creates draft, release.yml adds binaries and publishes)
+# Enable GitHub releases for Action versioning
 git_release_enable = true
-# Enable processing for releases
-release = true
-# Standard tag format (triggers release workflows) - with 'v' prefix to trigger release.yml
+# Disable crates.io publishing (this is not a Rust crate)
+release = false
+# Standard tag format for GitHub Actions - with 'v' prefix
 git_tag_name = "v{{version}}"
 # Allow major version bumps for breaking changes
 allow_dirty = false
-# Ensure proper semantic versioning
+# Ensure proper semantic versioning for Action compatibility
 semver_check = true
-# Create published releases (upload-rust-binary-action will add binaries)
+# Create published releases immediately
 git_release_draft = false
-# Custom release body template
+# Custom release body template for GitHub Actions
 git_release_body = """
 ## 🚀 What's Changed
 
 {{changelog}}
 
-## 📦 Installation
+## 📦 Usage
 
-### Download Binary
-Download the appropriate binary for your platform from the assets below.
-
-### Using Cargo
-```bash
-cargo install {{package}}
+### GitHub Action (Recommended)
+```yaml
+- uses: loonghao/rust-actions-toolkit@{{version}}
+  with:
+    command: ci
 ```
 
-### Using Package Managers
-```bash
-# Homebrew (macOS/Linux)
-brew install loonghao/tap/{{package}}
+### Reusable Workflows
+```yaml
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@{{version}}
+```
 
-# Scoop (Windows)
-scoop bucket add loonghao https://github.com/loonghao/scoop-bucket
-scoop install {{package}}
+### Version References
+```yaml
+- uses: loonghao/rust-actions-toolkit@{{version}}  # Specific version
+- uses: loonghao/rust-actions-toolkit@v{{major}}   # Major version
+- uses: loonghao/rust-actions-toolkit@main         # Latest (not recommended for production)
 ```
 
 ## 🔗 Links
-- [Documentation](https://docs.rs/{{package}})
-- [Examples](https://github.com/{{owner}}/{{package}}/tree/main/examples)
-- [Changelog](https://github.com/{{owner}}/{{package}}/blob/main/CHANGELOG.md)
+- [Documentation](https://github.com/loonghao/rust-actions-toolkit/blob/{{version}}/README.md)
+- [Usage Guide](https://github.com/loonghao/rust-actions-toolkit/blob/{{version}}/USAGE.md)
+- [Examples](https://github.com/loonghao/rust-actions-toolkit/tree/{{version}}/examples)
+- [Marketplace](https://github.com/marketplace/actions/rust-actions-toolkit)
 
-**Full Changelog**: https://github.com/{{owner}}/{{package}}/compare/{{previous_tag}}...{{version}}
+**Full Changelog**: https://github.com/loonghao/rust-actions-toolkit/compare/{{previous_tag}}...{{version}}
 """
 
-# Example configuration for Python wheel projects
-# Uncomment and customize if your project includes Python wheels
-# [[package]]
-# name = "your-python-package"
-# changelog_update = true
-# git_release_enable = true
-# release = true
-# git_tag_name = "v{{version}}"
-# allow_dirty = false
-# semver_check = true
-# git_release_draft = false
-# git_release_body = """
-# ## 🚀 What's Changed
-# 
-# {{changelog}}
-# 
-# ## 📦 Installation
-# 
-# ### Python Package
-# ```bash
-# pip install {{package}}
-# ```
-# 
-# ### Download Binary
-# Download the appropriate binary for your platform from the assets below.
-# 
-# ### Using Cargo
-# ```bash
-# cargo install {{package}}
-# ```
-# 
-# ## 🔗 Links
-# - [PyPI Package](https://pypi.org/project/{{package}}/)
-# - [Documentation](https://docs.rs/{{package}})
-# - [Examples](https://github.com/{{owner}}/{{package}}/tree/main/examples)
-# - [Changelog](https://github.com/{{owner}}/{{package}}/blob/main/CHANGELOG.md)
-# 
-# **Full Changelog**: https://github.com/{{owner}}/{{package}}/compare/{{previous_tag}}...{{version}}
-# """
+
