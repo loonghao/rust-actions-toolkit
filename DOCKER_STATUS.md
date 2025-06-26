@@ -14,6 +14,7 @@ The Docker images for rust-actions-toolkit are currently being built. All major 
 6. **Cargo Permissions** - Fixed cargo directory ownership for rust user in all images
 7. **Target Compatibility** - Reduced to only stable and essential Rust targets
 8. **Tool Simplification** - Minimized cargo tools to avoid compilation failures
+9. **Python Compatibility** - Simplified python-wheels image for Ubuntu 24.04
 
 ### 🕐 Expected Timeline
 
