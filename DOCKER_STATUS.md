@@ -19,6 +19,7 @@ The Docker images for rust-actions-toolkit are currently being built. All major 
 11. **Tool Verification** - Added graceful handling for missing cargo tools in security-audit
 12. **Test Script Sync** - Updated test scripts to match actually installed tools
 13. **Rust Version** - Upgraded to Rust 1.83.0 for dependency compatibility
+14. **ARG Scope** - Fixed Docker ARG variable scope issue for configurable Rust version
 
 ### 🕐 Expected Timeline
 
