@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.description="Optimized image for cross-compilatio
 
 USER root
 
-# Install additional cross-compilation dependencies
+# Install essential cross-compilation dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # Windows cross-compilation
     gcc-mingw-w64-x86-64 \
@@ -17,19 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Wine for testing Windows binaries
     wine \
     wine64 \
-    # Additional ARM variants
+    # ARM support (already installed in base image: gcc-aarch64-linux-gnu, gcc-arm-linux-gnueabihf)
     gcc-arm-linux-gnueabi \
-    # MIPS support
-    gcc-mips-linux-gnu \
-    gcc-mipsel-linux-gnu \
-    gcc-mips64-linux-gnuabi64 \
-    gcc-mips64el-linux-gnuabi64 \
-    # PowerPC support
-    gcc-powerpc-linux-gnu \
-    gcc-powerpc64-linux-gnu \
-    gcc-powerpc64le-linux-gnu \
-    # S390x support
-    gcc-s390x-linux-gnu \
     && rm -rf /var/lib/apt/lists/*
 
 USER root
@@ -40,48 +29,23 @@ RUN chown -R rust:rust /usr/local/cargo && \
 
 USER rust
 
-# Install additional Rust targets for comprehensive cross-compilation
+# Install essential Rust targets (only stable and commonly used ones)
 RUN rustup target add \
-    # Windows targets
     x86_64-pc-windows-gnu \
     i686-pc-windows-gnu \
-    # Additional Linux targets
     i686-unknown-linux-gnu \
     i686-unknown-linux-musl \
-    armv5te-unknown-linux-gnueabi \
-    armv7-unknown-linux-musleabihf \
-    aarch64-unknown-linux-musl \
-    # MIPS targets
-    mips-unknown-linux-gnu \
-    mipsel-unknown-linux-gnu \
-    mips64-unknown-linux-gnuabi64 \
-    mips64el-unknown-linux-gnuabi64 \
-    # PowerPC targets
-    powerpc-unknown-linux-gnu \
-    powerpc64-unknown-linux-gnu \
-    powerpc64le-unknown-linux-gnu \
-    # S390x target
-    s390x-unknown-linux-gnu \
-    # RISC-V targets
-    riscv64gc-unknown-linux-gnu
+    armv7-unknown-linux-gnueabihf \
+    aarch64-unknown-linux-musl
 
-# Configure additional cross-compilation linkers
+# Configure cross-compilation linkers for essential targets
 ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
     CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER=i686-w64-mingw32-gcc \
+    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
+    CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     # Windows-specific environment
     WINEARCH=win64 \
-    WINEPREFIX=/home/rust/.wine \
-    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
-    CARGO_TARGET_ARMV5TE_UNKNOWN_LINUX_GNUEABI_LINKER=arm-linux-gnueabi-gcc \
-    CARGO_TARGET_MIPS_UNKNOWN_LINUX_GNU_LINKER=mips-linux-gnu-gcc \
-    CARGO_TARGET_MIPSEL_UNKNOWN_LINUX_GNU_LINKER=mipsel-linux-gnu-gcc \
-    CARGO_TARGET_MIPS64_UNKNOWN_LINUX_GNUABI64_LINKER=mips64-linux-gnuabi64-gcc \
-    CARGO_TARGET_MIPS64EL_UNKNOWN_LINUX_GNUABI64_LINKER=mips64el-linux-gnuabi64-gcc \
-    CARGO_TARGET_POWERPC_UNKNOWN_LINUX_GNU_LINKER=powerpc-linux-gnu-gcc \
-    CARGO_TARGET_POWERPC64_UNKNOWN_LINUX_GNU_LINKER=powerpc64-linux-gnu-gcc \
-    CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc \
-    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
-    CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc
+    WINEPREFIX=/home/rust/.wine
 
 # Install cross for additional target support
 RUN cargo install cross --locked

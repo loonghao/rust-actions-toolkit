@@ -32,17 +32,9 @@ RUN chown -R rust:rust /usr/local/cargo && \
 
 USER rust
 
-# Install essential security tools only (to avoid permission issues)
+# Install only the most essential security tools
 RUN cargo install --locked cargo-audit || echo "cargo-audit failed, continuing..."
 RUN cargo install --locked cargo-deny || echo "cargo-deny failed, continuing..."
-RUN cargo install --locked cargo-outdated || echo "cargo-outdated failed, continuing..."
-
-# Install additional security scanners
-RUN cargo install --locked \
-    # SBOM generation
-    cargo-cyclonedx \
-    # Vulnerability scanning
-    rustsec-admin
 
 # Create security scanning scripts
 COPY docker/build-scripts/security-scan.sh /usr/local/bin/security-scan
