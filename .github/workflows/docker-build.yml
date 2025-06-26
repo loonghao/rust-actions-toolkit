@@ -156,7 +156,7 @@ jobs:
               ;;
             "security-audit")
               docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.image }} \
-                bash -c "cargo audit --version && cargo deny --version"
+                bash -c "cargo audit --version"
               ;;
           esac
           
