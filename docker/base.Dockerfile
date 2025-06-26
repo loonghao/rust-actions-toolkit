@@ -53,9 +53,8 @@ RUN rustup component add rustfmt clippy && \
         riscv64gc-unknown-linux-gnu
 
 # Install essential Rust tools
-# Use specific versions for better stability and install only essential tools
+# Only install cross for now, other tools can be installed in specialized images
 RUN cargo install cross@0.2.5
-RUN cargo install cargo-audit@0.20.0 || echo "Warning: cargo-audit installation failed"
 
 # Configure OpenSSL for cross-compilation
 ENV OPENSSL_STATIC=1 \
