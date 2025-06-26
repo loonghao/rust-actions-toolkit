@@ -55,10 +55,7 @@ inputs:
     description: 'Cargo registry token for crates.io publishing (release-plz command)'
     required: false
     default: ''
-  release-plz-version:
-    description: 'Release-plz action version (release-plz command)'
-    required: false
-    default: 'v0.5'
+
   release-plz-token:
     description: 'Enhanced GitHub PAT for cross-workflow triggers (release-plz command)'
     required: false
@@ -274,10 +271,12 @@ runs:
       with:
         toolchain: ${{ inputs.rust_toolchain }}
 
+    # Note: GitHub Actions composite actions don't support dynamic 'uses' expressions
+    # So we use the default version and let users override in their workflows if needed
     - name: Run release-plz release
       id: release-plz-release
       if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release' || inputs.release_plz_command == 'both')
-      uses: release-plz/action@${{ inputs.release_plz_version }}
+      uses: release-plz/action@v0.5
       with:
         command: release
       env:
@@ -287,7 +286,7 @@ runs:
     - name: Run release-plz release-pr
       id: release-plz-pr
       if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release-pr' || inputs.release_plz_command == 'both')
-      uses: release-plz/action@${{ inputs.release_plz_version }}
+      uses: release-plz/action@v0.5
       with:
         command: release-pr
       env:
