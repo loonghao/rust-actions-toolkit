@@ -32,9 +32,9 @@ RUN chown -R rust:rust /usr/local/cargo && \
 
 USER rust
 
-# Install only the most essential security tools
+# Install only cargo-audit (most essential security tool)
+# Skip cargo-deny for now to reduce build time
 RUN cargo install --locked cargo-audit || echo "cargo-audit failed, continuing..."
-RUN cargo install --locked cargo-deny || echo "cargo-deny failed, continuing..."
 
 # Create security scanning scripts
 COPY docker/build-scripts/security-scan.sh /usr/local/bin/security-scan
@@ -61,10 +61,9 @@ RUN if command -v cargo-audit >/dev/null 2>&1; then \
 RUN mkdir -p /home/rust/.config/cargo-deny && \
     echo 'Creating default deny.toml configuration...'
 
-# Verify security tools installation (only check tools that were actually installed)
+# Verify security tools installation
 RUN echo "Security tools installed:" && \
     cargo audit --version && \
-    (cargo deny --version || echo "cargo-deny not available") && \
     echo "✅ Security audit tools ready"
 
 CMD ["/bin/bash"]

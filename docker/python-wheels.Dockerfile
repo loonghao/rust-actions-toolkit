@@ -21,16 +21,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install maturin and related tools (use virtual environment to avoid system conflicts)
+# Split into separate layers for better caching
 RUN python3 -m venv /opt/python-tools && \
-    /opt/python-tools/bin/pip install --upgrade pip && \
-    /opt/python-tools/bin/pip install \
+    /opt/python-tools/bin/pip install --upgrade pip
+
+# Install Python tools in separate layer (cached if requirements don't change)
+RUN /opt/python-tools/bin/pip install \
         maturin[patchelf] \
         cibuildwheel \
         auditwheel \
         twine \
-        build && \
-    # Create symlinks for global access
-    ln -s /opt/python-tools/bin/maturin /usr/local/bin/maturin && \
+        build
+
+# Create symlinks in separate layer
+RUN ln -s /opt/python-tools/bin/maturin /usr/local/bin/maturin && \
     ln -s /opt/python-tools/bin/cibuildwheel /usr/local/bin/cibuildwheel
 
 USER root

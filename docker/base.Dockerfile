@@ -54,7 +54,8 @@ RUN rustup component add rustfmt clippy && \
         riscv64gc-unknown-linux-gnu
 
 # Install essential Rust tools
-# Only install cross for now, other tools can be installed in specialized images
+# Only install cross for now to minimize base image build time
+# Other tools are installed in specialized images for better caching
 RUN cargo install cross@0.2.5
 
 # Configure OpenSSL for cross-compilation
