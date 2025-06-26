@@ -8,38 +8,19 @@ LABEL org.opencontainers.image.description="Optimized image for building Python 
 
 USER root
 
-# Install Python development dependencies
+# Install Python development dependencies (simplified for Ubuntu 24.04)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Python development
+    # Python development (use system default Python 3.12 in Ubuntu 24.04)
     python3-dev \
     python3-pip \
     python3-venv \
-    # Additional Python versions (using deadsnakes PPA)
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        python3.8 \
-        python3.8-dev \
-        python3.8-venv \
-        python3.9 \
-        python3.9-dev \
-        python3.9-venv \
-        python3.10 \
-        python3.10-dev \
-        python3.10-venv \
-        python3.11 \
-        python3.11-dev \
-        python3.11-venv \
-        python3.12 \
-        python3.12-dev \
-        python3.12-venv \
+    python3-full \
     # Wheel building dependencies
-    && python3 -m pip install --upgrade pip setuptools wheel \
+    && python3 -m pip install --upgrade pip setuptools wheel --break-system-packages \
     && rm -rf /var/lib/apt/lists/*
 
 # Install maturin and related tools
-RUN python3 -m pip install \
+RUN python3 -m pip install --break-system-packages \
     maturin[patchelf] \
     cibuildwheel \
     auditwheel \
@@ -57,17 +38,10 @@ USER rust
 # Install PyO3 and related Rust crates (pre-compile for faster builds)
 RUN cargo install maturin --locked
 
-# Create Python virtual environments for different versions
-RUN python3.8 -m venv /home/rust/.venv/py38 && \
-    python3.9 -m venv /home/rust/.venv/py39 && \
-    python3.10 -m venv /home/rust/.venv/py310 && \
-    python3.11 -m venv /home/rust/.venv/py311 && \
-    python3.12 -m venv /home/rust/.venv/py312
-
-# Install maturin in each virtual environment
-RUN for py_ver in py38 py39 py310 py311 py312; do \
-        /home/rust/.venv/$py_ver/bin/pip install maturin[patchelf]; \
-    done
+# Create a single Python virtual environment
+RUN python3 -m venv /home/rust/.venv/default && \
+    /home/rust/.venv/default/bin/pip install --upgrade pip && \
+    /home/rust/.venv/default/bin/pip install maturin[patchelf]
 
 # Configure environment for wheel building
 ENV MATURIN_PEP517_ARGS="--compatibility linux"
@@ -81,12 +55,8 @@ RUN chmod +x /usr/local/bin/build-wheels /usr/local/bin/test-wheels
 USER rust
 
 # Verify Python and maturin installation
-RUN echo "Python versions:" && \
-    python3.8 --version && \
-    python3.9 --version && \
-    python3.10 --version && \
-    python3.11 --version && \
-    python3.12 --version && \
+RUN echo "Python version:" && \
+    python3 --version && \
     echo "Maturin version:" && \
     maturin --version
 
