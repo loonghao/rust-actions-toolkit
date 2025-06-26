@@ -7,10 +7,11 @@ The Docker images for rust-actions-toolkit are currently being built. All major 
 ### ✅ Issues Resolved
 
 1. **Branch Configuration** - Updated Docker workflow to use `master` branch
-2. **Tool Installation** - Simplified base image to avoid cargo tool conflicts  
+2. **Tool Installation** - Simplified base image to avoid cargo tool conflicts
 3. **User Creation** - Fixed UID/GID conflicts in Ubuntu 24.04
 4. **GHCR Permissions** - Added `packages: write` permission for publishing
 5. **Build Reliability** - Improved error handling throughout
+6. **Cargo Permissions** - Fixed cargo directory ownership for rust user in all images
 
 ### 🕐 Expected Timeline
 
