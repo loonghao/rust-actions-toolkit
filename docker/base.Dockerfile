@@ -4,7 +4,7 @@
 # Trigger build: 2025-06-26 15:35
 
 # Accept Rust version as build argument
-ARG RUST_VERSION=1.83.0
+ARG RUST_VERSION=stable
 
 FROM ubuntu:24.04
 
@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Re-declare ARG after FROM (ARG before FROM is not available after FROM)
-ARG RUST_VERSION=1.83.0
+ARG RUST_VERSION=stable
 
 # Install Rust toolchain
 ENV RUSTUP_HOME=/usr/local/rustup \
@@ -47,7 +47,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     RUST_VERSION=${RUST_VERSION}
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-    sh -s -- -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION && \
+    sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable && \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME
 
 # Install common Rust components

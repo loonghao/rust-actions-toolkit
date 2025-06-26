@@ -22,9 +22,9 @@ on:
         default: 'false'
         type: boolean
       rust_version:
-        description: 'Rust version to use (e.g., 1.83.0, 1.82.0)'
+        description: 'Rust version to use (e.g., stable, 1.82.0, 1.81.0)'
         required: false
-        default: '1.83.0'
+        default: 'stable'
         type: string
 
 env:
@@ -79,7 +79,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            RUST_VERSION=${{ github.event.inputs.rust_version || '1.83.0' }}
+            RUST_VERSION=${{ github.event.inputs.rust_version || 'stable' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -129,7 +129,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            RUST_VERSION=${{ github.event.inputs.rust_version || '1.83.0' }}
+            RUST_VERSION=${{ github.event.inputs.rust_version || 'stable' }}
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base
 
   test-images:
