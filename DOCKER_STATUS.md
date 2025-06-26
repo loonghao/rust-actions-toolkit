@@ -12,6 +12,8 @@ The Docker images for rust-actions-toolkit are currently being built. All major 
 4. **GHCR Permissions** - Added `packages: write` permission for publishing
 5. **Build Reliability** - Improved error handling throughout
 6. **Cargo Permissions** - Fixed cargo directory ownership for rust user in all images
+7. **Target Compatibility** - Reduced to only stable and essential Rust targets
+8. **Tool Simplification** - Minimized cargo tools to avoid compilation failures
 
 ### 🕐 Expected Timeline
 
