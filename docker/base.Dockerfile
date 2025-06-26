@@ -37,9 +37,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Layer 3: Cross-compilation tools (changes rarely, but large)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     musl-tools \
+    musl-dev \
     gcc-aarch64-linux-gnu \
     gcc-arm-linux-gnueabihf \
     gcc-riscv64-linux-gnu \
+    libc6-dev-arm64-cross \
+    libc6-dev-armhf-cross \
     && rm -rf /var/lib/apt/lists/*
 
 # Re-declare ARG after FROM (ARG before FROM is not available after FROM)
@@ -76,10 +79,17 @@ ENV OPENSSL_STATIC=1 \
     OPENSSL_INCLUDE_DIR=/usr/include/openssl \
     PKG_CONFIG_ALLOW_CROSS=1
 
-# Configure cross-compilation linkers
+# Configure cross-compilation linkers for GNU targets
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER=riscv64-linux-gnu-gcc
+
+# Configure musl targets - use GNU gcc with musl flags
+ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc \
+    CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc \
+    CXX_aarch64_unknown_linux_musl=aarch64-linux-gnu-g++ \
+    AR_aarch64_unknown_linux_musl=aarch64-linux-gnu-ar \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static"
 
 # Set up working directory
 WORKDIR /workspace
