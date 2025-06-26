@@ -30,13 +30,10 @@ RUN chown -R rust:rust /usr/local/cargo && \
 USER rust
 
 # Install essential Rust targets (only stable and commonly used ones)
-RUN rustup target add \
-    x86_64-pc-windows-gnu \
-    i686-pc-windows-gnu \
-    i686-unknown-linux-gnu \
-    i686-unknown-linux-musl \
-    armv7-unknown-linux-gnueabihf \
-    aarch64-unknown-linux-musl
+# Install targets in separate layers for better caching
+RUN rustup target add x86_64-pc-windows-gnu i686-pc-windows-gnu
+RUN rustup target add i686-unknown-linux-gnu i686-unknown-linux-musl
+RUN rustup target add armv7-unknown-linux-gnueabihf aarch64-unknown-linux-musl
 
 # Configure cross-compilation linkers for essential targets
 ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \

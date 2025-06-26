@@ -17,24 +17,29 @@ LABEL org.opencontainers.image.source="https://github.com/loonghao/rust-actions-
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install system dependencies
+# Install system dependencies in layers for better caching
+# Layer 1: Essential build tools (changes rarely)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Build essentials
     build-essential \
     pkg-config \
     curl \
-    git \
     ca-certificates \
-    # OpenSSL development libraries
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer 2: Development libraries and git (changes occasionally)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
     libssl-dev \
-    # Cross-compilation tools
+    jq \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer 3: Cross-compilation tools (changes rarely, but large)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     musl-tools \
     gcc-aarch64-linux-gnu \
     gcc-arm-linux-gnueabihf \
     gcc-riscv64-linux-gnu \
-    # Additional utilities
-    jq \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Re-declare ARG after FROM (ARG before FROM is not available after FROM)
@@ -59,10 +64,11 @@ RUN rustup component add rustfmt clippy && \
         armv7-unknown-linux-gnueabihf \
         riscv64gc-unknown-linux-gnu
 
-# Install essential Rust tools
-# Only install cross for now to minimize base image build time
-# Other tools are installed in specialized images for better caching
-RUN cargo install cross@0.2.5
+# Install essential Rust tools with caching optimization
+# Use --locked for reproducible builds and better caching
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo install --locked cross@0.2.5
 
 # Configure OpenSSL for cross-compilation
 ENV OPENSSL_STATIC=1 \

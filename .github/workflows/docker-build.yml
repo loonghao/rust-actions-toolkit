@@ -80,8 +80,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             RUST_VERSION=${{ github.event.inputs.rust_version || 'stable' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-base
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-base,mode=max
 
   build-specialized:
     name: Build Specialized Images
@@ -126,8 +130,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.image }}
+          cache-to: |
+            type=gha,mode=max
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.image }},mode=max
           build-args: |
             RUST_VERSION=${{ github.event.inputs.rust_version || 'stable' }}
             BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:base
