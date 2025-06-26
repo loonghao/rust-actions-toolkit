@@ -120,7 +120,7 @@ runs:
       if: inputs.command != 'release-plz'
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: ${{ inputs.rust-toolchain }}
+        toolchain: ${{ inputs.rust_toolchain }}
         components: rustfmt,clippy
         targets: ${{ inputs.target }}
 
@@ -143,21 +143,21 @@ runs:
 
     # CI-specific steps
     - name: Check formatting
-      if: inputs.command == 'ci' && inputs.check-format == 'true'
+      if: inputs.command == 'ci' && inputs.check_format == 'true'
       shell: bash
       run: |
         echo "🎨 Checking code formatting..."
         cargo fmt --all --check
 
     - name: Run clippy
-      if: inputs.command == 'ci' && inputs.check-clippy == 'true'
+      if: inputs.command == 'ci' && inputs.check_clippy == 'true'
       shell: bash
       run: |
         echo "📎 Running clippy lints..."
-        cargo clippy ${{ inputs.clippy-args }}
+        cargo clippy ${{ inputs.clippy_args }}
 
     - name: Check documentation
-      if: inputs.command == 'ci' && inputs.check-docs == 'true'
+      if: inputs.command == 'ci' && inputs.check_docs == 'true'
       shell: bash
       env:
         RUSTDOCFLAGS: -D warnings
@@ -205,16 +205,16 @@ runs:
       if: inputs.command == 'release'
       uses: taiki-e/upload-rust-binary-action@v1
       with:
-        bin: ${{ inputs.binary-name }}
+        bin: ${{ inputs.binary_name }}
         target: ${{ inputs.target }}
         tar: all
         zip: windows
-        token: ${{ inputs.github-token }}
+        token: ${{ inputs.github_token }}
 
     # Python wheel building (conditional)
     - name: Check for pyproject.toml
       id: check-pyproject
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true'
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true'
       shell: bash
       run: |
         if [ -f "pyproject.toml" ]; then
@@ -226,13 +226,13 @@ runs:
         fi
 
     - name: Set up Python
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Setup cross-compilation for Python wheels (Linux ARM64)
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
       shell: bash
       run: |
         sudo apt-get update
@@ -240,13 +240,13 @@ runs:
         echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
     - name: Install maturin
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
       run: pip install maturin[patchelf]
 
     - name: Build Python wheels
       id: build-wheel
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
       run: |
         maturin build --release --target ${{ inputs.target }}
@@ -254,11 +254,11 @@ runs:
         echo "wheel-path=$wheel_path" >> $GITHUB_OUTPUT
 
     - name: Upload wheels to release
-      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
+      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
       uses: softprops/action-gh-release@v2
       with:
         files: ${{ steps.build-wheel.outputs.wheel-path }}
-        token: ${{ inputs.github-token }}
+        token: ${{ inputs.github_token }}
 
     # Release-plz steps
     - name: Checkout repository (for release-plz)
@@ -266,43 +266,43 @@ runs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        token: ${{ inputs.release-plz-token || inputs.github-token }}
+        token: ${{ inputs.release_plz_token || inputs.github_token }}
 
     - name: Install Rust toolchain (for release-plz)
       if: inputs.command == 'release-plz'
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: ${{ inputs.rust-toolchain }}
+        toolchain: ${{ inputs.rust_toolchain }}
 
     - name: Run release-plz release
       id: release-plz-release
-      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release' || inputs.release-plz-command == 'both')
-      uses: release-plz/action@${{ inputs.release-plz-version }}
+      if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release' || inputs.release_plz_command == 'both')
+      uses: release-plz/action@${{ inputs.release_plz_version }}
       with:
         command: release
       env:
-        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
-        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
+        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
 
     - name: Run release-plz release-pr
       id: release-plz-pr
-      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release-pr' || inputs.release-plz-command == 'both')
-      uses: release-plz/action@${{ inputs.release-plz-version }}
+      if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release-pr' || inputs.release_plz_command == 'both')
+      uses: release-plz/action@${{ inputs.release_plz_version }}
       with:
         command: release-pr
       env:
-        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
-        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
+        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
 
     - name: Output release-plz results
       if: inputs.command == 'release-plz'
       shell: bash
       run: |
         echo "Release-plz completed successfully!"
-        if [[ "${{ inputs.release-plz-command }}" == "release" || "${{ inputs.release-plz-command }}" == "both" ]]; then
+        if [[ "${{ inputs.release_plz_command }}" == "release" || "${{ inputs.release_plz_command }}" == "both" ]]; then
           echo "Release command executed"
         fi
-        if [[ "${{ inputs.release-plz-command }}" == "release-pr" || "${{ inputs.release-plz-command }}" == "both" ]]; then
+        if [[ "${{ inputs.release_plz_command }}" == "release-pr" || "${{ inputs.release_plz_command }}" == "both" ]]; then
           echo "Release PR command executed"
         fi
 
