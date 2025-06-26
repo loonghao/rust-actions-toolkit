@@ -9,6 +9,7 @@ The Docker images for rust-actions-toolkit are currently being built. This was c
 1. **Docker build workflow** - Updated to use `master` branch
 2. **Base image reliability** - Simplified to only install essential tools
 3. **Build process** - Improved error handling and tool installation
+4. **User creation conflicts** - Fixed UID/GID conflicts in Ubuntu 24.04
 
 ### 🕐 Expected Timeline
 
