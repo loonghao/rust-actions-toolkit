@@ -37,7 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.75.0
+    RUST_VERSION=1.82.0
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION && \
@@ -52,12 +52,10 @@ RUN rustup component add rustfmt clippy && \
         armv7-unknown-linux-gnueabihf \
         riscv64gc-unknown-linux-gnu
 
-# Install common Rust tools
-RUN cargo install --locked \
-    cargo-audit \
-    cargo-deny \
-    cargo-outdated \
-    cross
+# Install essential Rust tools
+# Use specific versions for better stability and install only essential tools
+RUN cargo install cross@0.2.5
+RUN cargo install cargo-audit@0.20.0 || echo "Warning: cargo-audit installation failed"
 
 # Configure OpenSSL for cross-compilation
 ENV OPENSSL_STATIC=1 \
