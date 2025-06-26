@@ -17,6 +17,7 @@ The Docker images for rust-actions-toolkit are currently being built. All major 
 9. **Python Compatibility** - Simplified python-wheels image for Ubuntu 24.04
 10. **Pip Conflicts** - Resolved system package upgrade conflicts in python-wheels
 11. **Tool Verification** - Added graceful handling for missing cargo tools in security-audit
+12. **Test Script Sync** - Updated test scripts to match actually installed tools
 
 ### 🕐 Expected Timeline
 
