@@ -3,6 +3,9 @@
 # Updated: 2025-06-26 - Fixed branch configuration for Docker builds
 # Trigger build: 2025-06-26 15:35
 
+# Accept Rust version as build argument
+ARG RUST_VERSION=1.83.0
+
 FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.title="Rust Actions Toolkit - Base"
@@ -38,7 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.83.0
+    RUST_VERSION=${RUST_VERSION}
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
     sh -s -- -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION && \
