@@ -15,17 +15,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-venv \
     python3-full \
-    # Wheel building dependencies
-    && python3 -m pip install --upgrade pip setuptools wheel --break-system-packages \
+    # Install wheel and setuptools from apt to avoid pip conflicts
+    python3-wheel \
+    python3-setuptools \
     && rm -rf /var/lib/apt/lists/*
 
-# Install maturin and related tools
-RUN python3 -m pip install --break-system-packages \
-    maturin[patchelf] \
-    cibuildwheel \
-    auditwheel \
-    twine \
-    build
+# Install maturin and related tools (use virtual environment to avoid system conflicts)
+RUN python3 -m venv /opt/python-tools && \
+    /opt/python-tools/bin/pip install --upgrade pip && \
+    /opt/python-tools/bin/pip install \
+        maturin[patchelf] \
+        cibuildwheel \
+        auditwheel \
+        twine \
+        build && \
+    # Create symlinks for global access
+    ln -s /opt/python-tools/bin/maturin /usr/local/bin/maturin && \
+    ln -s /opt/python-tools/bin/cibuildwheel /usr/local/bin/cibuildwheel
 
 USER root
 
@@ -38,10 +44,11 @@ USER rust
 # Install PyO3 and related Rust crates (pre-compile for faster builds)
 RUN cargo install maturin --locked
 
-# Create a single Python virtual environment
+# Create a Python virtual environment for the rust user
 RUN python3 -m venv /home/rust/.venv/default && \
     /home/rust/.venv/default/bin/pip install --upgrade pip && \
-    /home/rust/.venv/default/bin/pip install maturin[patchelf]
+    /home/rust/.venv/default/bin/pip install maturin[patchelf] && \
+    chown -R rust:rust /home/rust/.venv
 
 # Configure environment for wheel building
 ENV MATURIN_PEP517_ARGS="--compatibility linux"
