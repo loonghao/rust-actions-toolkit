@@ -26,6 +26,10 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: loonghao/rust-toolkit
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-base:
     name: Build Base Image
