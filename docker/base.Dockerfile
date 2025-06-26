@@ -68,11 +68,17 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
 # Install common Rust components
 RUN rustup component add rustfmt clippy && \
     rustup target add \
+        # Zero-dependency Windows builds
+        x86_64-pc-windows-gnu \
+        i686-pc-windows-gnu \
+        # Static Linux builds
         x86_64-unknown-linux-musl \
-        aarch64-unknown-linux-gnu \
         aarch64-unknown-linux-musl \
-        armv7-unknown-linux-gnueabihf \
-        riscv64gc-unknown-linux-gnu
+        # Standard builds
+        x86_64-unknown-linux-gnu \
+        aarch64-unknown-linux-gnu \
+        x86_64-apple-darwin \
+        aarch64-apple-darwin
 
 # Install essential Rust tools with caching optimization
 # Use --locked for reproducible builds and better caching
