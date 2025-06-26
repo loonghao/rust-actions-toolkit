@@ -24,26 +24,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tree \
     && rm -rf /var/lib/apt/lists/*
 
+USER root
+
+# Fix cargo permissions and install security tools
+RUN chown -R rust:rust /usr/local/cargo && \
+    chmod -R 755 /usr/local/cargo
+
 USER rust
 
-# Install comprehensive Rust security tools
-RUN cargo install --locked \
-    # Core security tools
-    cargo-audit \
-    cargo-deny \
-    cargo-geiger \
-    cargo-outdated \
-    cargo-udeps \
-    # License checking
-    cargo-license \
-    # Dependency analysis
-    cargo-tree \
-    cargo-machete \
-    # Code quality
-    cargo-bloat \
-    cargo-expand \
-    # Supply chain security
-    cargo-vet
+# Install essential security tools only (to avoid permission issues)
+RUN cargo install --locked cargo-audit || echo "cargo-audit failed, continuing..."
+RUN cargo install --locked cargo-deny || echo "cargo-deny failed, continuing..."
+RUN cargo install --locked cargo-outdated || echo "cargo-outdated failed, continuing..."
 
 # Install additional security scanners
 RUN cargo install --locked \

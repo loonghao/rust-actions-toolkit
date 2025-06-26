@@ -73,7 +73,8 @@ WORKDIR /workspace
 # Create non-root user for security
 RUN if ! getent group rust > /dev/null 2>&1; then groupadd --gid 1001 rust; fi && \
     if ! getent passwd rust > /dev/null 2>&1; then useradd --uid 1001 --gid 1001 --shell /bin/bash --create-home rust; fi && \
-    chown -R rust:rust /workspace
+    chown -R rust:rust /workspace && \
+    chown -R rust:rust $RUSTUP_HOME $CARGO_HOME
 
 USER rust
 

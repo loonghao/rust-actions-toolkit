@@ -32,6 +32,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-s390x-linux-gnu \
     && rm -rf /var/lib/apt/lists/*
 
+USER root
+
+# Fix cargo permissions for rust user
+RUN chown -R rust:rust /usr/local/cargo && \
+    chmod -R 755 /usr/local/cargo
+
 USER rust
 
 # Install additional Rust targets for comprehensive cross-compilation

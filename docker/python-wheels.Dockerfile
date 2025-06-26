@@ -46,6 +46,12 @@ RUN python3 -m pip install \
     twine \
     build
 
+USER root
+
+# Fix cargo permissions for rust user
+RUN chown -R rust:rust /usr/local/cargo && \
+    chmod -R 755 /usr/local/cargo
+
 USER rust
 
 # Install PyO3 and related Rust crates (pre-compile for faster builds)
