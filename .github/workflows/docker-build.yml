@@ -2,13 +2,13 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main]
-    paths: 
+    branches: [master]
+    paths:
       - 'docker/**'
       - '.github/workflows/docker-build.yml'
   pull_request:
-    branches: [main]
-    paths: 
+    branches: [master]
+    paths:
       - 'docker/**'
       - '.github/workflows/docker-build.yml'
   schedule:
@@ -162,7 +162,7 @@ jobs:
     name: Update README with Docker info
     runs-on: ubuntu-latest
     needs: [build-base, build-specialized]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
