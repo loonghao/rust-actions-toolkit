@@ -37,6 +37,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
+# Re-declare ARG after FROM (ARG before FROM is not available after FROM)
+ARG RUST_VERSION=1.83.0
+
 # Install Rust toolchain
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
