@@ -71,8 +71,8 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
 WORKDIR /workspace
 
 # Create non-root user for security
-RUN groupadd --gid 1000 rust && \
-    useradd --uid 1000 --gid rust --shell /bin/bash --create-home rust && \
+RUN if ! getent group rust > /dev/null 2>&1; then groupadd --gid 1001 rust; fi && \
+    if ! getent passwd rust > /dev/null 2>&1; then useradd --uid 1001 --gid 1001 --shell /bin/bash --create-home rust; fi && \
     chown -R rust:rust /workspace
 
 USER rust
