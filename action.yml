@@ -48,7 +48,7 @@ inputs:
   github-token:
     description: 'GitHub token for release uploads (release command)'
     required: false
-    default: ${{ github.token }}
+    default: ''
 
   # Release-plz specific inputs
   cargo-registry-token:
