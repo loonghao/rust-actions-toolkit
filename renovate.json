@@ -1,6 +1,59 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
-  ]
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "GitHub Actions - Pin to SHA and automerge patch/minor",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "matchUpdateTypes": ["patch", "minor"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "GitHub Actions - Manual review for major updates",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "addLabels": ["major-update", "needs-review"]
+    },
+    {
+      "description": "Rust dependencies - Group and automerge patch updates",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "groupName": "Rust patch updates"
+    },
+    {
+      "description": "Development dependencies - Automerge patch/minor",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "groupName": "Development dependencies"
+    },
+    {
+      "description": "Security updates - High priority",
+      "matchPackagePatterns": ["*"],
+      "vulnerabilityAlerts": true,
+      "prPriority": 10,
+      "automerge": false,
+      "addLabels": ["security", "high-priority"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "osvVulnerabilityAlerts": true
 }
