@@ -74,18 +74,43 @@ jobs:
 
 ### Platform Detection
 
-| Runner | Auto-Detected Target |
-|--------|---------------------|
-| `ubuntu-latest` | `x86_64-unknown-linux-gnu` |
-| `windows-latest` | `x86_64-pc-windows-msvc` |
-| `macos-latest` (Intel) | `x86_64-apple-darwin` |
-| `macos-latest` (ARM64) | `aarch64-apple-darwin` |
+| Runner | Auto-Detected Target | Notes |
+|--------|---------------------|-------|
+| `ubuntu-latest` | `x86_64-unknown-linux-gnu` | Standard GNU build |
+| `windows-latest` | `x86_64-pc-windows-gnu` | Zero-dependency build |
+| `macos-latest` (Intel) | `x86_64-apple-darwin` | Intel Mac |
+| `macos-latest` (ARM64) | `aarch64-apple-darwin` | Apple Silicon |
+
+**Supported Targets** (aligned with Docker base image):
+- **Zero-dependency Windows**: `x86_64-pc-windows-gnu`, `i686-pc-windows-gnu`
+- **Static Linux**: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`
+- **Standard builds**: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`
+- **macOS**: `x86_64-apple-darwin`, `aarch64-apple-darwin`
 
 ### Name Detection
 
 - **Project Name**: From `Cargo.toml` `name` field
 - **Binary Name**: Same as project name (unless overridden)
 - **Archive Name**: `{project-name}-{target}`
+
+### Release Notes Templates
+
+The action supports custom release notes templates with variable substitution:
+
+**Template Locations** (checked in order):
+1. Custom path via `release-notes-template` input
+2. `.github/release-template.md`
+3. `.github/RELEASE_TEMPLATE.md`
+4. `release-template.md`
+5. `RELEASE_TEMPLATE.md`
+
+**Available Variables**:
+- `{{PROJECT_NAME}}` - Project name from Cargo.toml
+- `{{VERSION}}` - Version without 'v' prefix
+- `{{TAG_NAME}}` - Full tag name (e.g., v1.0.0)
+- `{{TARGET}}` - Target platform
+- `{{REPOSITORY}}` - GitHub repository (owner/repo)
+- `{{PROJECT_TYPE}}` - Detected project type
 
 ## 📋 Inputs
 
@@ -105,6 +130,8 @@ jobs:
 | `skip-build` | Skip building, only upload existing artifacts | `false` |
 | `draft` | Create as draft release | `false` |
 | `prerelease` | Mark as prerelease | Auto-detected from tag |
+| `release-notes-template` | Path to release notes template | `''` |
+| `generate-release-notes` | Auto-generate if no template | `true` |
 
 ## 📤 Outputs
 
@@ -219,6 +246,48 @@ jobs:
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     draft: true
+```
+
+### Custom Release Notes Template
+
+Create `.github/release-template.md`:
+```markdown
+# {{PROJECT_NAME}} {{VERSION}}
+
+🎉 New release available!
+
+## 📦 Downloads
+
+### Binaries
+- Windows: `{{PROJECT_NAME}}-x86_64-pc-windows-gnu.zip`
+- Linux: `{{PROJECT_NAME}}-x86_64-unknown-linux-gnu.tar.gz`
+- macOS: `{{PROJECT_NAME}}-x86_64-apple-darwin.tar.gz`
+
+### Python Package
+```bash
+pip install {{PROJECT_NAME}}=={{VERSION}}
+```
+
+## Changes
+<!-- Add your changes here -->
+```
+
+Then use the action normally:
+```yaml
+- name: Release with template
+  uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    # Template will be auto-detected
+```
+
+Or specify a custom path:
+```yaml
+- name: Release with custom template
+  uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    release-notes-template: docs/release-notes.md
 ```
 
 ## 🆚 Comparison
