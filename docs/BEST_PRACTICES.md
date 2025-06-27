@@ -4,24 +4,24 @@ This guide helps you choose the best approach for using rust-actions-toolkit in 
 
 ## 🚀 Quick Decision Guide
 
-### **New Project? → Use GitHub Actions**
+### **New Project? �?Use GitHub Actions**
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 ```
 
-### **Need Full Control? → Use Reusable Workflows**
+### **Need Full Control? �?Use Reusable Workflows**
 ```yaml
-uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2
 ```
 
-### **Existing Project? → Use GitHub Actions**
+### **Existing Project? �?Use GitHub Actions**
 ```yaml
 # Easy to integrate into existing workflows
 - name: Existing step
   run: make test
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 ```
@@ -30,19 +30,19 @@ uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
 
 | Feature | GitHub Actions | Reusable Workflows |
 |---------|---------------|-------------------|
-| **Ease of Use** | ⭐⭐⭐⭐⭐ Simple | ⭐⭐⭐ Moderate |
-| **Flexibility** | ⭐⭐⭐⭐⭐ High | ⭐⭐ Limited |
-| **Integration** | ⭐⭐⭐⭐⭐ Easy | ⭐⭐⭐ Moderate |
+| **Ease of Use** | ⭐⭐⭐⭐�?Simple | ⭐⭐�?Moderate |
+| **Flexibility** | ⭐⭐⭐⭐�?High | ⭐⭐ Limited |
+| **Integration** | ⭐⭐⭐⭐�?Easy | ⭐⭐�?Moderate |
 | **Debugging** | ⭐⭐⭐⭐ Good | ⭐⭐ Difficult |
-| **Standardization** | ⭐⭐⭐ Good | ⭐⭐⭐⭐⭐ Excellent |
-| **Performance** | ⭐⭐⭐⭐ Good | ⭐⭐⭐⭐⭐ Better |
+| **Standardization** | ⭐⭐�?Good | ⭐⭐⭐⭐�?Excellent |
+| **Performance** | ⭐⭐⭐⭐ Good | ⭐⭐⭐⭐�?Better |
 
 ## 🎯 Use Cases and Recommendations
 
 ### 1. **Simple CI/CD (Recommended: GitHub Actions)**
 
 ```yaml
-# ✅ Perfect for most projects
+# �?Perfect for most projects
 name: CI
 on: [push, pull_request]
 jobs:
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
           rust-toolchain: stable
@@ -64,7 +64,7 @@ jobs:
 ### 2. **Complex Multi-Platform Releases (Recommended: GitHub Actions)**
 
 ```yaml
-# ✅ Flexible matrix builds
+# �?Flexible matrix builds
 name: Release
 on:
   push:
@@ -83,7 +83,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release
           target: ${{ matrix.target }}
@@ -92,7 +92,7 @@ jobs:
 ### 3. **Automated Publishing (Recommended: GitHub Actions)**
 
 ```yaml
-# ✅ Simple release-plz integration
+# �?Simple release-plz integration
 name: Release-plz
 on:
   push:
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release-plz
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -111,12 +111,12 @@ jobs:
 ### 4. **Enterprise/Team Standardization (Recommended: Reusable Workflows)**
 
 ```yaml
-# ✅ Enforced standards across all projects
+# �?Enforced standards across all projects
 name: CI
 on: [push, pull_request]
 jobs:
   ci:
-    uses: company/rust-toolkit/.github/workflows/reusable-ci.yml@v1
+    uses: company/rust-toolkit/.github/workflows/reusable-ci.yml@v2
     with:
       rust-toolchain: stable
     secrets:
@@ -131,7 +131,7 @@ jobs:
 ### 5. **Custom Integration (Recommended: GitHub Actions)**
 
 ```yaml
-# ✅ Mix with existing logic
+# �?Mix with existing logic
 name: Custom CI
 on: [push, pull_request]
 jobs:
@@ -145,7 +145,7 @@ jobs:
         run: ./scripts/setup.sh
       
       # Use our toolkit for Rust tasks
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
           clippy-args: '--all-targets --all-features -- -D warnings -D clippy::all'
@@ -163,21 +163,21 @@ jobs:
 ### **1. Version Pinning**
 
 ```yaml
-# ✅ Recommended: Use major version
-- uses: loonghao/rust-actions-toolkit@v1
+# �?Recommended: Use major version
+- uses: loonghao/rust-actions-toolkit@v2
 
-# ✅ Also good: Pin to specific version for stability
-- uses: loonghao/rust-actions-toolkit@v1.1.7
+# �?Also good: Pin to specific version for stability
+- uses: loonghao/rust-actions-toolkit@v2.1.7
 
-# ❌ Avoid: Using latest or main branch
+# �?Avoid: Using latest or main branch
 - uses: loonghao/rust-actions-toolkit@main
 ```
 
 ### **2. Input Configuration**
 
 ```yaml
-# ✅ Explicit configuration
-- uses: loonghao/rust-actions-toolkit@v1
+# �?Explicit configuration
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     rust-toolchain: stable
@@ -185,8 +185,8 @@ jobs:
     check-clippy: true
     clippy-args: '--all-targets --all-features -- -D warnings'
 
-# ✅ Minimal configuration (uses defaults)
-- uses: loonghao/rust-actions-toolkit@v1
+# �?Minimal configuration (uses defaults)
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 ```
@@ -194,16 +194,16 @@ jobs:
 ### **3. Secret Management**
 
 ```yaml
-# ✅ Required secrets only
-- uses: loonghao/rust-actions-toolkit@v1
+# �?Required secrets only
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: release-plz
     cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     # Optional: Enhanced token for cross-workflow triggers
     release-plz-token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 
-# ✅ Conditional secrets
-- uses: loonghao/rust-actions-toolkit@v1
+# �?Conditional secrets
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
   env:
@@ -212,7 +212,7 @@ jobs:
 
 ## 🔧 Migration Strategies
 
-### **From Manual Workflows → GitHub Actions**
+### **From Manual Workflows �?GitHub Actions**
 
 ```yaml
 # Before: Manual steps
@@ -226,18 +226,18 @@ jobs:
   run: cargo test
 
 # After: Single action
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 ```
 
-### **From Reusable Workflows → GitHub Actions**
+### **From Reusable Workflows �?GitHub Actions**
 
 ```yaml
 # Before: Reusable workflow
 jobs:
   ci:
-    uses: org/toolkit/.github/workflows/ci.yml@v1
+    uses: org/toolkit/.github/workflows/ci.yml@v2
 
 # After: GitHub Action (more flexible)
 jobs:
@@ -245,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
 ```
@@ -255,7 +255,7 @@ jobs:
 ### **Library Crate**
 ```yaml
 # Simple CI with documentation checks
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     check-docs: true
@@ -265,12 +265,12 @@ jobs:
 ```yaml
 # CI + Release workflow
 # CI
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 
 # Release (separate workflow)
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: release
     target: ${{ matrix.target }}
@@ -279,7 +279,7 @@ jobs:
 ### **Python Extension**
 ```yaml
 # Automatic Python wheel building
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: release
     enable-python-wheels: true
@@ -288,7 +288,7 @@ jobs:
 ### **Workspace Project**
 ```yaml
 # Full workspace testing
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     clippy-args: '--workspace --all-targets --all-features -- -D warnings'
@@ -298,7 +298,7 @@ jobs:
 
 ### **Conditional Execution**
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   if: matrix.rust == 'stable'
   with:
     command: ci
@@ -309,7 +309,7 @@ jobs:
 ```yaml
 - name: Run CI
   id: ci
-  uses: loonghao/rust-actions-toolkit@v1
+  uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 
@@ -319,7 +319,7 @@ jobs:
 
 ### **Error Handling**
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
   continue-on-error: ${{ matrix.experimental }}
@@ -329,13 +329,13 @@ jobs:
 
 ### **Common Issues and Solutions**
 
-1. **OpenSSL compilation errors** → Automatically handled by our toolkit
-2. **Permission errors** → Use proper GitHub token configuration
-3. **Cross-compilation issues** → Use our built-in cross-compilation support
+1. **OpenSSL compilation errors** �?Automatically handled by our toolkit
+2. **Permission errors** �?Use proper GitHub token configuration
+3. **Cross-compilation issues** �?Use our built-in cross-compilation support
 
 ### **Debug Mode**
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
   env:

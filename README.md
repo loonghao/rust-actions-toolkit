@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
 ```
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release-plz
           cargo-registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
@@ -90,14 +90,14 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu }
           - { os: macos-latest, target: x86_64-apple-darwin }
 
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      # That's it! Everything else is automatic ✨
+      # That's it! Everything else is automatic �?
       - uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -125,7 +125,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release
           target: ${{ matrix.target }}
@@ -164,7 +164,7 @@ jobs:
 ### Custom Clippy Configuration
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     clippy-args: '--all-targets --all-features -- -D warnings -D clippy::pedantic'
@@ -175,20 +175,20 @@ jobs:
 For projects with `pyproject.toml`, Python wheels are automatically built:
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: release
     target: x86_64-unknown-linux-gnu
     enable-python-wheels: true
 ```
 
-## 🏷️ Versioning
+## 🏷�?Versioning
 
 Use specific versions for stability:
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1.0.0  # Specific version
-- uses: loonghao/rust-actions-toolkit@v1      # Major version
+- uses: loonghao/rust-actions-toolkit@v2.0.0  # Specific version
+- uses: loonghao/rust-actions-toolkit@v2      # Major version
 - uses: loonghao/rust-actions-toolkit@main    # Latest (not recommended for production)
 ```
 
@@ -202,7 +202,7 @@ name: CI
 on: [push, pull_request]
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 ```
@@ -210,7 +210,7 @@ jobs:
 ### Composite Actions
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit/actions/setup-rust-ci@v1
+- uses: loonghao/rust-actions-toolkit/actions/setup-rust-ci@v2
   with:
     toolchain: stable
     check-format: true
@@ -261,10 +261,10 @@ git_release_draft = false
 
 ### How It All Works Together
 
-1. **Push to main** → `release-plz.yml` creates release PR
-2. **Merge release PR** → `release-plz.yml` creates tag and GitHub release
-3. **Tag created** → `release.yml` builds cross-platform binaries
-4. **Binaries uploaded** → Users can download from GitHub releases
+1. **Push to main** �?`release-plz.yml` creates release PR
+2. **Merge release PR** �?`release-plz.yml` creates tag and GitHub release
+3. **Tag created** �?`release.yml` builds cross-platform binaries
+4. **Binaries uploaded** �?Users can download from GitHub releases
 
 ## 💡 Complete Examples
 
@@ -279,7 +279,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
           rust-toolchain: stable
@@ -307,7 +307,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release
           target: ${{ matrix.target }}
@@ -339,29 +339,29 @@ This toolkit is used by projects like:
 
 ## 🎯 Best Practices
 
-### **New Project? → Use GitHub Actions**
+### **New Project? �?Use GitHub Actions**
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 ```
 
-### **Need Flexibility? → Use GitHub Actions**
+### **Need Flexibility? �?Use GitHub Actions**
 ```yaml
 # Mix with existing steps
 - name: Custom setup
   run: ./setup.sh
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 - name: Custom cleanup
   run: ./cleanup.sh
 ```
 
-### **Enterprise Standardization? → Use Reusable Workflows**
+### **Enterprise Standardization? �?Use Reusable Workflows**
 ```yaml
 # Enforced standards across all projects
-uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2
 ```
 
 **📖 [Complete Best Practices Guide](docs/BEST_PRACTICES.md)**

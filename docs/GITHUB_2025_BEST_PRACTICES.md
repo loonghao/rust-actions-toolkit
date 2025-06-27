@@ -2,19 +2,19 @@
 
 This document outlines how rust-actions-toolkit follows GitHub Actions 2025 best practices.
 
-## ğŸ—ï¸ Architecture Changes
+## ğŸ—ï¸?Architecture Changes
 
-### **Before: Nested Composite Actions (âŒ Deprecated)**
+### **Before: Nested Composite Actions (â?Deprecated)**
 ```yaml
 # Old problematic structure
 runs:
   using: 'composite'
   steps:
-    - uses: ./actions/setup-rust-ci  # âŒ Relative path issues
-    - uses: ./actions/rust-release   # âŒ Complex nested structure
+    - uses: ./actions/setup-rust-ci  # â?Relative path issues
+    - uses: ./actions/rust-release   # â?Complex nested structure
 ```
 
-### **After: Inline Composite Action (âœ… 2025 Best Practice)**
+### **After: Inline Composite Action (âœ?2025 Best Practice)**
 ```yaml
 # New streamlined structure
 runs:
@@ -30,18 +30,18 @@ runs:
 ## ğŸ¯ Key Improvements
 
 ### 1. **Single Action File**
-- âœ… All logic in one `action.yml` file
-- âœ… No relative path dependencies
-- âœ… Easier to maintain and debug
-- âœ… Better performance (no nested action resolution)
+- âœ?All logic in one `action.yml` file
+- âœ?No relative path dependencies
+- âœ?Easier to maintain and debug
+- âœ?Better performance (no nested action resolution)
 
 ### 2. **Improved Error Handling**
 ```yaml
 - name: Setup cross-compilation toolchain
-  uses: taiki-e/setup-cross-toolchain-action@v1
+  uses: taiki-e/setup-cross-toolchain-action@v2
   with:
     target: ${{ inputs.target }}
-  continue-on-error: true  # âœ… Graceful failure handling
+  continue-on-error: true  # âœ?Graceful failure handling
 ```
 
 ### 3. **Better Logging**
@@ -49,7 +49,7 @@ runs:
 - name: Check formatting
   shell: bash
   run: |
-    echo "ğŸ¨ Checking code formatting..."  # âœ… Clear progress indicators
+    echo "ğŸ¨ Checking code formatting..."  # âœ?Clear progress indicators
     cargo fmt --all --check
 ```
 
@@ -71,7 +71,7 @@ runs:
 
 ### **Conditional Execution**
 ```yaml
-# âœ… Efficient conditional logic
+# âœ?Efficient conditional logic
 - name: Install Rust toolchain
   if: inputs.command != 'release-plz'
   uses: dtolnay/rust-toolchain@master
@@ -87,7 +87,7 @@ runs:
 outputs:
   rust-version:
     description: 'Installed Rust version'
-    value: ${{ steps.rust-version.outputs.version }}  # âœ… Direct step reference
+    value: ${{ steps.rust-version.outputs.version }}  # âœ?Direct step reference
 ```
 
 ### **Environment Variables**
@@ -109,11 +109,11 @@ outputs:
 | **Maintenance** | Multiple files | Single file | Simplified |
 | **Error Messages** | Nested/unclear | Direct/clear | Better UX |
 
-## ğŸ›¡ï¸ Security Improvements
+## ğŸ›¡ï¸?Security Improvements
 
 ### **Token Handling**
 ```yaml
-# âœ… Proper token fallback
+# âœ?Proper token fallback
 - name: Checkout repository (for release-plz)
   uses: actions/checkout@v4
   with:
@@ -122,7 +122,7 @@ outputs:
 
 ### **Dependency Pinning**
 ```yaml
-# âœ… Use specific versions
+# âœ?Use specific versions
 - uses: dtolnay/rust-toolchain@master  # Pinned to stable master
 - uses: actions/checkout@v4            # Pinned major version
 - uses: taiki-e/install-action@v2      # Pinned major version
@@ -130,7 +130,7 @@ outputs:
 
 ### **Minimal Permissions**
 ```yaml
-# âœ… No hardcoded permissions in action
+# âœ?No hardcoded permissions in action
 # Permissions inherited from calling workflow
 ```
 
@@ -138,8 +138,8 @@ outputs:
 
 ### **Clear Command Structure**
 ```yaml
-# âœ… Simple, intuitive commands
-- uses: loonghao/rust-actions-toolkit@v1
+# âœ?Simple, intuitive commands
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci          # Clear intent
     command: release     # Clear intent
@@ -148,8 +148,8 @@ outputs:
 
 ### **Flexible Configuration**
 ```yaml
-# âœ… Sensible defaults with customization options
-- uses: loonghao/rust-actions-toolkit@v1
+# âœ?Sensible defaults with customization options
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     rust-toolchain: stable        # Default: stable
@@ -160,10 +160,10 @@ outputs:
 
 ### **Rich Outputs**
 ```yaml
-# âœ… Useful outputs for further processing
+# âœ?Useful outputs for further processing
 - name: Run CI
   id: ci
-  uses: loonghao/rust-actions-toolkit@v1
+  uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
 
@@ -177,17 +177,17 @@ outputs:
 ### **For Users**
 ```yaml
 # Before (still works)
-- uses: loonghao/rust-actions-toolkit@v1.1.x
+- uses: loonghao/rust-actions-toolkit@v2.1.x
 
 # After (recommended)
-- uses: loonghao/rust-actions-toolkit@v1.2.0+
+- uses: loonghao/rust-actions-toolkit@v2.2.0+
 ```
 
 ### **For Maintainers**
-1. âœ… **Consolidated action.yml** - All logic in one file
-2. âœ… **Removed nested actions** - Simplified structure
-3. âœ… **Improved error handling** - Better user experience
-4. âœ… **Enhanced logging** - Clearer progress indicators
+1. âœ?**Consolidated action.yml** - All logic in one file
+2. âœ?**Removed nested actions** - Simplified structure
+3. âœ?**Improved error handling** - Better user experience
+4. âœ?**Enhanced logging** - Clearer progress indicators
 
 ## ğŸ“š Best Practices Applied
 

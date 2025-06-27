@@ -2,7 +2,7 @@
 
 Universal GitHub Actions toolkit for Rust projects with support for CI/CD, cross-platform builds, releases, and Python wheels.
 
-## ✨ Features
+## �?Features
 
 - **🔍 Code Quality**: Automated formatting, linting, and documentation checks
 - **🧪 Testing**: Cross-platform testing on Linux, macOS, and Windows
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
 ```
@@ -50,7 +50,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release
           target: ${{ matrix.target }}
@@ -89,7 +89,7 @@ jobs:
 ### Custom Clippy Configuration
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
     clippy-args: '--all-targets --all-features -- -D warnings -D clippy::pedantic'
@@ -100,20 +100,20 @@ jobs:
 For projects with `pyproject.toml`, Python wheels are automatically built:
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1
+- uses: loonghao/rust-actions-toolkit@v2
   with:
     command: release
     target: x86_64-unknown-linux-gnu
     enable-python-wheels: true
 ```
 
-## 🏷️ Versioning
+## 🏷�?Versioning
 
 Use specific versions for stability:
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v1.0.0  # Specific version
-- uses: loonghao/rust-actions-toolkit@v1      # Major version
+- uses: loonghao/rust-actions-toolkit@v2.0.0  # Specific version
+- uses: loonghao/rust-actions-toolkit@v2      # Major version
 - uses: loonghao/rust-actions-toolkit@main    # Latest (not recommended for production)
 ```
 

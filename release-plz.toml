@@ -9,7 +9,7 @@
 # 1. release-plz creates tag (v1.0.0) and GitHub release with changelog
 # 2. Tag triggers publish-action.yml workflow for GitHub Marketplace
 # 3. Major version tag (v1) is created/updated automatically
-# 4. Users can reference @v1, @v1.0.0, etc.
+# 4. Users can reference @v2, @v2.0.0, etc.
 
 [workspace]
 # Enable automatic changelog generation

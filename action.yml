@@ -128,7 +128,7 @@ runs:
       run: |
         version=$(rustc --version)
         echo "version=$version" >> $GITHUB_OUTPUT
-        echo "✅ Installed Rust: $version"
+        echo "�?Installed Rust: $version"
         echo "📦 Cargo version: $(cargo --version)"
         echo "🎯 Target: ${{ inputs.target }}"
 
@@ -172,7 +172,7 @@ runs:
     # Release-specific steps
     - name: Setup cross-compilation toolchain
       if: inputs.command == 'release'
-      uses: taiki-e/setup-cross-toolchain-action@v1
+      uses: taiki-e/setup-cross-toolchain-action@v2
       with:
         target: ${{ inputs.target }}
       continue-on-error: true
@@ -200,7 +200,7 @@ runs:
     - name: Build and upload binary
       id: build-binary
       if: inputs.command == 'release'
-      uses: taiki-e/upload-rust-binary-action@v1
+      uses: taiki-e/upload-rust-binary-action@v2
       with:
         bin: ${{ inputs.binary_name }}
         target: ${{ inputs.target }}
@@ -216,7 +216,7 @@ runs:
       run: |
         if [ -f "pyproject.toml" ]; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "✅ pyproject.toml found, proceeding with Python wheel build"
+          echo "�?pyproject.toml found, proceeding with Python wheel build"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "⚠️ pyproject.toml not found, skipping Python wheel build"

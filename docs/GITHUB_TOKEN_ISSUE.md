@@ -13,16 +13,16 @@ secret name `GITHUB_TOKEN` within `workflow_call` can not be used since it would
 
 `GITHUB_TOKEN` is a **system-reserved secret** automatically provided by GitHub Actions. You cannot declare it in the `secrets` section of a `workflow_call` because it conflicts with the built-in token.
 
-## ‚úÖ Solution
+## ‚ú?Solution
 
-### Before (‚ùå Incorrect)
+### Before (‚ù?Incorrect)
 
 ```yaml
 # reusable-workflow.yml
 on:
   workflow_call:
     secrets:
-      GITHUB_TOKEN:  # ‚ùå This causes the error
+      GITHUB_TOKEN:  # ‚ù?This causes the error
         description: 'GitHub token'
         required: true
 
@@ -31,16 +31,16 @@ jobs:
   call-workflow:
     uses: ./.github/workflows/reusable-workflow.yml
     secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ‚ùå Not needed
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # ‚ù?Not needed
 ```
 
-### After (‚úÖ Correct)
+### After (‚ú?Correct)
 
 ```yaml
 # reusable-workflow.yml
 on:
   workflow_call:
-    # ‚úÖ Don't declare GITHUB_TOKEN in secrets
+    # ‚ú?Don't declare GITHUB_TOKEN in secrets
     secrets:
       CUSTOM_TOKEN:
         description: 'Custom token if needed'
@@ -53,14 +53,14 @@ jobs:
       - name: Use GitHub token
         run: echo "Token available"
         env:
-          # ‚úÖ GITHUB_TOKEN is automatically available
+          # ‚ú?GITHUB_TOKEN is automatically available
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # calling-workflow.yml
 jobs:
   call-workflow:
     uses: ./.github/workflows/reusable-workflow.yml
-    # ‚úÖ No need to pass GITHUB_TOKEN
+    # ‚ú?No need to pass GITHUB_TOKEN
     secrets:
       CUSTOM_TOKEN: ${{ secrets.CUSTOM_TOKEN }}
 ```
@@ -98,7 +98,7 @@ Remove `GITHUB_TOKEN` from the secrets passed to reusable workflows:
 # Before
 jobs:
   call:
-    uses: org/repo/.github/workflows/reusable.yml@v1
+    uses: org/repo/.github/workflows/reusable.yml@v2
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       OTHER_TOKEN: ${{ secrets.OTHER_TOKEN }}
@@ -106,7 +106,7 @@ jobs:
 # After
 jobs:
   call:
-    uses: org/repo/.github/workflows/reusable.yml@v1
+    uses: org/repo/.github/workflows/reusable.yml@v2
     secrets:
       OTHER_TOKEN: ${{ secrets.OTHER_TOKEN }}
 ```
@@ -137,10 +137,10 @@ on:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2
     with:
       binary-name: my-app
-    # ‚úÖ No GITHUB_TOKEN needed
+    # ‚ú?No GITHUB_TOKEN needed
 ```
 
 ### Release-plz Workflow
@@ -154,10 +154,10 @@ on:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v2
     secrets:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      # ‚úÖ Only pass custom tokens, not GITHUB_TOKEN
+      # ‚ú?Only pass custom tokens, not GITHUB_TOKEN
       RELEASE_PLZ_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
 ```
 
@@ -170,10 +170,10 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2
     with:
       rust-toolchain: stable
-    # ‚úÖ No secrets needed for basic CI
+    # ‚ú?No secrets needed for basic CI
 ```
 
 ## üéØ Best Practices
@@ -181,7 +181,7 @@ jobs:
 ### 1. Use Automatic GITHUB_TOKEN
 
 ```yaml
-# ‚úÖ Let GitHub provide the token automatically
+# ‚ú?Let GitHub provide the token automatically
 - name: Create release
   uses: softprops/action-gh-release@v2
   with:
@@ -192,7 +192,7 @@ jobs:
 ### 2. Custom Tokens for Enhanced Permissions
 
 ```yaml
-# ‚úÖ Use custom PAT for cross-workflow triggers
+# ‚ú?Use custom PAT for cross-workflow triggers
 - name: Trigger other workflow
   uses: actions/github-script@v7
   with:
@@ -204,7 +204,7 @@ jobs:
 ### 3. Conditional Token Usage
 
 ```yaml
-# ‚úÖ Fallback to GITHUB_TOKEN if custom token not available
+# ‚ú?Fallback to GITHUB_TOKEN if custom token not available
 - name: Checkout with token
   uses: actions/checkout@v4
   with:
@@ -245,7 +245,7 @@ permissions:
 ## üîÑ Version Compatibility
 
 This issue affects:
-- ‚úÖ **v1.1.6+**: Fixed - `GITHUB_TOKEN` removed from reusable workflow secrets
-- ‚ùå **v1.1.5 and earlier**: Contains the issue
+- ‚ú?**v1.1.6+**: Fixed - `GITHUB_TOKEN` removed from reusable workflow secrets
+- ‚ù?**v1.1.5 and earlier**: Contains the issue
 
-**Migration**: Update to `@v1` or `@v1.1.6+` to get the fix automatically.
+**Migration**: Update to `@v2` or `@v2.1.6+` to get the fix automatically.
