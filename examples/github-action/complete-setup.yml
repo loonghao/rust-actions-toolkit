@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
           rust-toolchain: stable
@@ -26,7 +26,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: setup
           rust-toolchain: stable
@@ -49,7 +49,7 @@ on:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v2
     secrets:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,34 +64,55 @@ on:
     tags: ["v*"]
 
 jobs:
-  # Use reusable workflow for comprehensive cross-platform releases
-  release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v1
+  # Option 1: Use reusable workflow (traditional approach)
+  release-reusable:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Alternative: Use GitHub Action for custom matrix
-  custom-release:
+  # Option 2: Use GitHub Action for custom matrix (updated)
+  release-custom:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
+          # Updated targets aligned with Docker base image
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-pc-windows-gnu
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v1
+      - uses: loonghao/rust-actions-toolkit@v2
         with:
           command: release
           target: ${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           binary-name: ""  # Auto-detect from Cargo.toml
           enable-python-wheels: true  # Enable if you have pyproject.toml
+
+  # Option 3: Use smart-release action (recommended - zero config)
+  release-smart:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      # That's it! Everything else is automatic ✨
+      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: ${{ matrix.target }}

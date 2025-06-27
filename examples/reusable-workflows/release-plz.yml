@@ -10,7 +10,7 @@ on:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v1
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@v2
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable

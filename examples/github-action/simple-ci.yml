@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run comprehensive Rust CI
-        uses: loonghao/rust-actions-toolkit@v1
+        uses: loonghao/rust-actions-toolkit@v2
         with:
           command: ci
           rust-toolchain: stable
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Rust (without checks)
-        uses: loonghao/rust-actions-toolkit@v1
+        uses: loonghao/rust-actions-toolkit@v2
         with:
           command: setup
           rust-toolchain: stable
