@@ -1,0 +1,222 @@
+name: Release py2pyd
+
+# Example workflow for py2pyd project using the upload-release-artifacts action
+# This demonstrates how to build and release both binaries and Python wheels
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Build binaries for multiple platforms
+  build-binaries:
+    name: Build Binary (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Zero-dependency Windows builds
+          - { target: x86_64-pc-windows-gnu, os: ubuntu-latest }
+          - { target: i686-pc-windows-gnu, os: ubuntu-latest }
+          # Static Linux builds
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-latest }
+          # Standard builds
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: x86_64-apple-darwin, os: macos-13 }
+          - { target: aarch64-apple-darwin, os: macos-13 }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build binary
+        uses: loonghao/rust-actions-toolkit@v2
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          binary-name: py2pyd
+          enable-python-wheels: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload binary artifacts
+        uses: loonghao/rust-actions-toolkit/actions/upload-release-artifacts@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          binary-name: py2pyd
+          binary-path: target/${{ matrix.target }}/release/
+          upload-wheels: false
+          create-archives: true
+          archive-name: py2pyd-${{ matrix.target }}
+          tag-name: ${{ github.event.inputs.tag || github.ref_name }}
+
+  # Build Python wheels for multiple platforms
+  build-wheels:
+    name: Build Wheels (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: x86_64-apple-darwin, os: macos-13 }
+          - { target: aarch64-apple-darwin, os: macos-13 }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Python wheels
+        uses: loonghao/rust-actions-toolkit@v2
+        with:
+          command: release
+          target: ${{ matrix.target }}
+          binary-name: py2pyd
+          enable-python-wheels: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload wheel artifacts
+        uses: loonghao/rust-actions-toolkit/actions/upload-release-artifacts@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          upload-binaries: false
+          wheel-path: target/wheels/
+          tag-name: ${{ github.event.inputs.tag || github.ref_name }}
+
+  # Create final release with all artifacts
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-binaries, build-wheels]
+    if: always() && (needs.build-binaries.result == 'success' || needs.build-wheels.result == 'success')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create release summary
+        run: |
+          echo "🎉 py2pyd Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Artifacts Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Binaries" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows (GNU): x86_64, i686" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux (musl): x86_64, aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux (GNU): x86_64, aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS: x86_64, aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐍 Python Wheels" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux: x86_64, aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS: x86_64, aarch64" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows: x86_64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Installation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Binary Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Download and extract for your platform" >> $GITHUB_STEP_SUMMARY
+          echo "curl -L https://github.com/${{ github.repository }}/releases/latest/download/py2pyd-{target}.tar.gz | tar xz" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Python Package Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "pip install py2pyd" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## 🎉 py2pyd Release
+          
+          Convert Python files to .pyd extension with ease!
+          
+          ### 📦 What's Included
+          
+          #### 🔧 Standalone Binaries
+          - **Windows**: Zero-dependency executables for x86_64 and i686
+          - **Linux**: Static musl builds for maximum compatibility
+          - **macOS**: Universal support for Intel and Apple Silicon
+          
+          #### 🐍 Python Wheels
+          - Pre-built wheels for major platforms
+          - Easy installation with `pip install py2pyd`
+          
+          ### 🚀 Quick Start
+          
+          #### Using the Binary
+          ```bash
+          # Download for your platform
+          curl -L https://github.com/${{ github.repository }}/releases/latest/download/py2pyd-{your-target}.tar.gz | tar xz
+          
+          # Convert Python files
+          ./py2pyd input.py output.pyd
+          ```
+          
+          #### Using Python Package
+          ```bash
+          pip install py2pyd
+          python -m py2pyd input.py output.pyd
+          ```
+          
+          ### 🔧 Supported Platforms
+          
+          | Platform | Binary | Python Wheel |
+          |----------|--------|--------------|
+          | Windows x64 | ✅ | ✅ |
+          | Windows x86 | ✅ | ❌ |
+          | Linux x64 | ✅ | ✅ |
+          | Linux ARM64 | ✅ | ✅ |
+          | macOS Intel | ✅ | ✅ |
+          | macOS Apple Silicon | ✅ | ✅ |
+          
+          EOF
+          
+          echo "notes-file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: py2pyd ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: ${{ steps.release-notes.outputs.notes-file }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optional: Publish to PyPI
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-wheels]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta')
+    environment: pypi
+    
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist/
