@@ -114,7 +114,7 @@ To specify which binaries to release, edit `release.yml`:
 
 ```yaml
 - name: Upload binary assets
-  uses: taiki-e/upload-rust-binary-action@v2
+  uses: taiki-e/upload-rust-binary-action@v1
   with:
     bin: tool1,tool2  # Specify multiple binaries
     target: ${{ matrix.target }}
