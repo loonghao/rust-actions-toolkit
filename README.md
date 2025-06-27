@@ -75,6 +75,35 @@ jobs:
         run: verify-static target/x86_64-pc-windows-gnu/release/my-app.exe
 ```
 
+### 🚀 Zero-Config Release (Recommended)
+
+```yaml
+name: Smart Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { os: macos-latest, target: x86_64-apple-darwin }
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # That's it! Everything else is automatic ✨
+      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          target: ${{ matrix.target }}
+```
+
 ### Cross-Platform Releases
 
 ```yaml
