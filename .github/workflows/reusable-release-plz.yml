@@ -11,11 +11,6 @@ on:
         required: false
         type: string
         default: 'stable'
-      release_plz_version:
-        description: 'Release-plz action version'
-        required: false
-        type: string
-        default: 'v0.5'
     secrets:
       RELEASE_PLZ_TOKEN:
         description: 'GitHub PAT for release automation (optional, falls back to GITHUB_TOKEN)'
@@ -63,7 +58,7 @@ jobs:
           && sudo apt install gh -y
 
       - name: Run release-plz
-        uses: release-plz/action@${{ inputs.release_plz_version }}
+        uses: release-plz/action@v0.5
         with:
           command: release
         env:
@@ -106,7 +101,7 @@ jobs:
           && sudo apt install gh -y
 
       - name: Run release-plz
-        uses: release-plz/action@${{ inputs.release_plz_version }}
+        uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
