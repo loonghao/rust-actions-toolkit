@@ -257,6 +257,7 @@ jobs:
         if: contains(matrix.target, '-musl')
 
       - name: Configure environment variables
+        shell: bash
         run: |
           # Set common environment variables
           echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
@@ -290,6 +291,7 @@ jobs:
           fi
 
       - name: Configure Cross.toml
+        shell: bash
         run: |
           # Ensure Cross.toml exists and is properly configured
           if [ ! -f "Cross.toml" ]; then
@@ -301,6 +303,7 @@ jobs:
           fi
 
       - name: Test release build (mirrors release workflow)
+        shell: bash
         run: |
           echo "🔨 Testing release build for ${{ matrix.target }}..."
 
@@ -316,6 +319,7 @@ jobs:
 
       - name: Verify binary (optional)
         if: ${{ inputs.build-depth == 'full' }}
+        shell: bash
         run: |
           echo "🔍 Verifying generated binary..."
 
@@ -388,6 +392,7 @@ jobs:
 
       - name: Check for pyproject.toml
         id: check-pyproject
+        shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -418,6 +423,7 @@ jobs:
 
       - name: Test Python wheel
         if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
         run: |
           pip install target/wheels/*.whl
           python -c "import $(basename $(pwd) | tr '-' '_'); print('Python wheel import successful')"

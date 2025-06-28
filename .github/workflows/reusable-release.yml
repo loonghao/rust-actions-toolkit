@@ -123,13 +123,57 @@ jobs:
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
 
       - name: Configure Windows static linking
+        shell: bash
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
+
+      - name: Detect binary name
+        id: detect-binary
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.binary-name }}" ] && [ "${{ inputs.binary-name }}" != "" ]; then
+            echo "binary-name=${{ inputs.binary-name }}" >> $GITHUB_OUTPUT
+            echo "✅ Using provided binary name: ${{ inputs.binary-name }}"
+          else
+            echo "🔍 Auto-detecting binary name from Cargo.toml..."
+
+            if [ ! -f "Cargo.toml" ]; then
+              echo "❌ No Cargo.toml found and no binary-name provided"
+              echo "Please provide binary-name input or ensure Cargo.toml exists"
+              exit 1
+            fi
+
+            # Try multiple methods to extract binary name
+            binary_name=""
+
+            # Method 1: Look for package name
+            binary_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
+
+            # Method 2: If no package name, look for [[bin]] sections
+            if [ -z "$binary_name" ]; then
+              binary_name=$(grep -A 5 '^\[\[bin\]\]' Cargo.toml | grep '^name = ' | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
+            fi
+
+            # Method 3: Use directory name as fallback
+            if [ -z "$binary_name" ]; then
+              binary_name=$(basename "$(pwd)" | tr '-' '_')
+              echo "⚠️ Using directory name as fallback: $binary_name"
+            fi
+
+            if [ -n "$binary_name" ] && [ "$binary_name" != "" ]; then
+              echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+              echo "✅ Auto-detected binary name: $binary_name"
+            else
+              echo "❌ Could not detect binary name from Cargo.toml"
+              echo "Please provide binary-name input explicitly"
+              exit 1
+            fi
+          fi
 
       - name: Upload binary assets
         uses: taiki-e/upload-rust-binary-action@v1
         with:
-          bin: ${{ inputs.binary-name }}
+          bin: ${{ steps.detect-binary.outputs.binary-name }}
           target: ${{ matrix.target }}
           tar: all
           zip: windows
