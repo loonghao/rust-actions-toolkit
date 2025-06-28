@@ -32,21 +32,21 @@ on:
         type: string
         default: '[]'
 
-      # 新增：构建深度配置
+      # Enhanced: Build depth configuration
       build-depth:
         description: 'Build depth: basic, release, full'
         required: false
         type: string
         default: 'basic'
 
-      # 新增：是否测试发布构建
+      # Enhanced: Test release builds for consistency
       test-release-builds:
         description: 'Test release builds to match release workflow'
         required: false
         type: boolean
         default: false
 
-      # 新增：发布目标平台（用于一致性测试）
+      # Enhanced: Release target platforms for consistency testing
       release-target-platforms:
         description: 'Target platforms to test (should match release workflow)'
         required: false
@@ -208,7 +208,7 @@ jobs:
         if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
         run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
 
-  # 新增：发布构建一致性测试
+  # Enhanced: Release build consistency testing
   test-release-consistency:
     name: Release Build Consistency Test - ${{ matrix.target }}
     if: ${{ inputs.test-release-builds }}

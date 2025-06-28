@@ -1,5 +1,5 @@
 # Setup Build Environment Action
-# 统一的构建环境设置，确保 CI 和 Release 的一致性
+# Unified build environment setup to ensure CI and Release consistency
 
 name: 'Setup Build Environment'
 description: 'Setup consistent build environment for CI and Release workflows'
@@ -54,7 +54,7 @@ runs:
       if: startsWith(inputs.os, 'macos')
       shell: bash
       run: |
-        # macOS 通常已经有必要的工具
+        # macOS usually has necessary tools already
         echo "macOS build environment ready"
     
     - name: Install Rust toolchain
@@ -99,7 +99,7 @@ runs:
     - name: Configure Cross.toml
       shell: bash
       run: |
-        # 确保 Cross.toml 存在并配置正确
+        # Ensure Cross.toml exists and is properly configured
         if [ ! -f "Cross.toml" ]; then
           echo "Creating default Cross.toml for cross-compilation..."
           curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-mimalloc.toml
@@ -111,12 +111,12 @@ runs:
     - name: Configure environment variables
       shell: bash
       run: |
-        # 设置通用环境变量
+        # Set common environment variables
         echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
         echo "RUST_BACKTRACE=1" >> $GITHUB_ENV
         echo "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true" >> $GITHUB_ENV
         
-        # OpenSSL 配置 (musl targets)
+        # OpenSSL configuration (musl targets)
         if [[ "${{ inputs.target }}" == *"musl"* ]]; then
           echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
           echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
@@ -124,7 +124,7 @@ runs:
           echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
         fi
         
-        # Windows 交叉编译配置 (解决 mimalloc 问题)
+        # Windows cross-compilation configuration (fixes mimalloc issues)
         if [[ "${{ inputs.target }}" == *"windows-gnu"* ]]; then
           if [[ "${{ inputs.target }}" == "i686-pc-windows-gnu" ]]; then
             echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix" >> $GITHUB_ENV
@@ -137,7 +137,7 @@ runs:
           fi
         fi
         
-        # Windows MSVC 配置
+        # Windows MSVC configuration
         if [[ "${{ inputs.target }}" == *"windows-msvc"* ]]; then
           echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
         fi

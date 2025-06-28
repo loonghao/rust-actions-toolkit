@@ -1,0 +1,43 @@
+# CI Configuration for Consistency Testing
+# This configuration ensures CI tests the same targets and build types as Release
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  actions: read          # For security audit
+  security-events: write # For security audit
+
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.3.0
+    with:
+      rust-toolchain: stable
+      enable-coverage: false
+      enable-python-wheel: false
+      
+      # 🎯 KEY: Enable release build testing for consistency
+      test-release-builds: true
+      build-depth: release  # Test both debug and release builds
+      
+      # 🎯 KEY: Use EXACTLY the same targets as release.yml
+      # This ensures CI catches cross-compilation issues early
+      release-target-platforms: |
+        [
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+        ]
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -37,7 +37,7 @@ on:
             {"target": "aarch64-pc-windows-msvc", "os": "windows-2022"}
           ]
 
-      # 新增：CI 一致性验证
+      # Enhanced: CI consistency verification
       verify-ci-consistency:
         description: 'Verify that CI tested the same targets'
         required: false
@@ -57,7 +57,7 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
-  # 新增：CI 一致性检查
+  # Enhanced: CI consistency verification
   verify-consistency:
     name: Verify CI Consistency
     if: ${{ inputs.verify-ci-consistency && startsWith(github.ref_name, 'v') }}
