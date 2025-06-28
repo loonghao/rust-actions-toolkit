@@ -152,14 +152,14 @@ runs:
         echo "Cargo command: ${{ steps.setup-cargo.outputs.command }}"
         echo "Target directory: ${{ steps.setup-cargo.outputs.target-dir }}"
         
-        # 验证 Rust 工具链
+        # Verify Rust toolchain
         rustc --version
         cargo --version
-        
-        # 验证目标平台
+
+        # Verify target platform
         rustup target list --installed | grep "${{ inputs.target }}" || echo "⚠️ Target ${{ inputs.target }} not found"
-        
-        # 验证交叉编译工具 (如果需要)
+
+        # Verify cross-compilation tools (if needed)
         if [[ "${{ steps.setup-cargo.outputs.command }}" == "cross" ]]; then
           cross --version || echo "⚠️ Cross not available"
         fi

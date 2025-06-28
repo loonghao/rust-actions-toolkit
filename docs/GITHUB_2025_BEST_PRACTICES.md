@@ -2,19 +2,19 @@
 
 This document outlines how rust-actions-toolkit follows GitHub Actions 2025 best practices.
 
-## 🏗�?Architecture Changes
+## 🏗️ Architecture Changes
 
-### **Before: Nested Composite Actions (�?Deprecated)**
+### **Before: Nested Composite Actions (❌ Deprecated)**
 ```yaml
 # Old problematic structure
 runs:
   using: 'composite'
   steps:
-    - uses: ./actions/setup-rust-ci  # �?Relative path issues
-    - uses: ./actions/rust-release   # �?Complex nested structure
+    - uses: ./actions/setup-rust-ci  # ❌ Relative path issues
+    - uses: ./actions/rust-release   # ❌ Complex nested structure
 ```
 
-### **After: Inline Composite Action (�?2025 Best Practice)**
+### **After: Inline Composite Action (✅ 2025 Best Practice)**
 ```yaml
 # New streamlined structure
 runs:
@@ -30,10 +30,10 @@ runs:
 ## 🎯 Key Improvements
 
 ### 1. **Single Action File**
-- �?All logic in one `action.yml` file
-- �?No relative path dependencies
-- �?Easier to maintain and debug
-- �?Better performance (no nested action resolution)
+- ✅ All logic in one `action.yml` file
+- ✅ No relative path dependencies
+- ✅ Easier to maintain and debug
+- ✅ Better performance (no nested action resolution)
 
 ### 2. **Improved Error Handling**
 ```yaml
@@ -41,7 +41,7 @@ runs:
   uses: taiki-e/setup-cross-toolchain-action@v1
   with:
     target: ${{ inputs.target }}
-  continue-on-error: true  # �?Graceful failure handling
+  continue-on-error: true  # ✅ Graceful failure handling
 ```
 
 ### 3. **Better Logging**
@@ -49,7 +49,7 @@ runs:
 - name: Check formatting
   shell: bash
   run: |
-    echo "🎨 Checking code formatting..."  # �?Clear progress indicators
+    echo "🎨 Checking code formatting..."  # ✅ Clear progress indicators
     cargo fmt --all --check
 ```
 
@@ -71,7 +71,7 @@ runs:
 
 ### **Conditional Execution**
 ```yaml
-# �?Efficient conditional logic
+# ✅ Efficient conditional logic
 - name: Install Rust toolchain
   if: inputs.command != 'release-plz'
   uses: dtolnay/rust-toolchain@master
@@ -87,7 +87,7 @@ runs:
 outputs:
   rust-version:
     description: 'Installed Rust version'
-    value: ${{ steps.rust-version.outputs.version }}  # �?Direct step reference
+    value: ${{ steps.rust-version.outputs.version }}  # ✅ Direct step reference
 ```
 
 ### **Environment Variables**
@@ -109,11 +109,11 @@ outputs:
 | **Maintenance** | Multiple files | Single file | Simplified |
 | **Error Messages** | Nested/unclear | Direct/clear | Better UX |
 
-## 🛡�?Security Improvements
+## 🛡️ Security Improvements
 
 ### **Token Handling**
 ```yaml
-# �?Proper token fallback
+# ✅ Proper token fallback
 - name: Checkout repository (for release-plz)
   uses: actions/checkout@v4
   with:
@@ -122,7 +122,7 @@ outputs:
 
 ### **Dependency Pinning**
 ```yaml
-# �?Use specific versions
+# ✅ Use specific versions
 - uses: dtolnay/rust-toolchain@master  # Pinned to stable master
 - uses: actions/checkout@v4            # Pinned major version
 - uses: taiki-e/install-action@v2      # Pinned major version
@@ -130,7 +130,7 @@ outputs:
 
 ### **Minimal Permissions**
 ```yaml
-# �?No hardcoded permissions in action
+# ✅ No hardcoded permissions in action
 # Permissions inherited from calling workflow
 ```
 
@@ -138,7 +138,7 @@ outputs:
 
 ### **Clear Command Structure**
 ```yaml
-# �?Simple, intuitive commands
+# ✅ Simple, intuitive commands
 - uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci          # Clear intent
@@ -148,7 +148,7 @@ outputs:
 
 ### **Flexible Configuration**
 ```yaml
-# �?Sensible defaults with customization options
+# ✅ Sensible defaults with customization options
 - uses: loonghao/rust-actions-toolkit@v2
   with:
     command: ci
@@ -160,7 +160,7 @@ outputs:
 
 ### **Rich Outputs**
 ```yaml
-# �?Useful outputs for further processing
+# ✅ Useful outputs for further processing
 - name: Run CI
   id: ci
   uses: loonghao/rust-actions-toolkit@v2
@@ -184,10 +184,10 @@ outputs:
 ```
 
 ### **For Maintainers**
-1. �?**Consolidated action.yml** - All logic in one file
-2. �?**Removed nested actions** - Simplified structure
-3. �?**Improved error handling** - Better user experience
-4. �?**Enhanced logging** - Clearer progress indicators
+1. ✅ **Consolidated action.yml** - All logic in one file
+2. ✅ **Removed nested actions** - Simplified structure
+3. ✅ **Improved error handling** - Better user experience
+4. ✅ **Enhanced logging** - Clearer progress indicators
 
 ## 📚 Best Practices Applied
 
