@@ -27,6 +27,17 @@ case "$TARGET" in
     *-windows-*)
         echo "🔧 Configuring Windows target environment"
         export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=+crt-static"
+        # Fix mimalloc cross-compilation issues
+        export CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true
+        if [[ "$TARGET" == "i686-pc-windows-gnu" ]]; then
+            export CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix
+            export CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix
+            export AR_i686_pc_windows_gnu=i686-w64-mingw32-ar
+        elif [[ "$TARGET" == "x86_64-pc-windows-gnu" ]]; then
+            export CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix
+            export CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix
+            export AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar
+        fi
         ;;
     aarch64-*)
         echo "🔧 Configuring ARM64 target environment"

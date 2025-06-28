@@ -1,17 +1,61 @@
-# OpenSSL Compilation Issues - Troubleshooting Guide
+# Compilation Issues - Troubleshooting Guide
 
-This guide helps resolve common OpenSSL compilation errors when using the rust-actions-toolkit.
+This guide helps resolve common compilation errors when using the rust-actions-toolkit, including OpenSSL and memory allocator issues.
 
-## 🚨 Common Error
+## 🚨 Common Errors
+
+### OpenSSL Build Errors
 
 ```
 error: failed to run custom build command for `openssl-sys v0.9.109`
 warning: openssl-sys@0.9.109: Could not find directory of OpenSSL installation
 ```
 
+### Memory Allocator Build Errors
+
+```
+error: failed to run custom build command for `libmimalloc-sys v0.1.43`
+process didn't exit successfully: `build-script-build` (exit status: 1)
+TARGET = Some(i686-pc-windows-gnu)
+HOST = Some(x86_64-unknown-linux-gnu)
+```
+
+This commonly occurs when:
+- Cross-compiling to Windows targets (`i686-pc-windows-gnu`, `x86_64-pc-windows-gnu`)
+- Using crates that depend on `mimalloc` or other native allocators
+- Missing or incompatible C compiler toolchain
+
 ## 🔧 Solutions
 
-### Solution 1: Use rustls instead of OpenSSL (Recommended)
+### Solution 1: Disable problematic allocators (For mimalloc issues)
+
+If you're experiencing `libmimalloc-sys` build failures, disable the allocator:
+
+```toml
+# Cargo.toml
+[dependencies]
+# If a dependency uses mimalloc, disable it
+your-crate = { version = "1.0", default-features = false }
+
+# Or explicitly exclude mimalloc features
+some-crate = { version = "1.0", features = ["other-features"], default-features = false }
+```
+
+For crates that use mimalloc by default, check their documentation for feature flags to disable it:
+
+```toml
+# Example: Some crates provide allocator selection
+qsv = { version = "0.22", default-features = false, features = ["apply", "cat"] }  # Excludes mimalloc
+
+# Or use alternative allocators
+[dependencies]
+jemallocator = "0.5"  # Alternative allocator that works better with cross-compilation
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5"  # Only on non-MSVC targets
+```
+
+### Solution 2: Use rustls instead of OpenSSL (Recommended)
 
 Replace OpenSSL dependencies with rustls in your `Cargo.toml`:
 
@@ -87,15 +131,27 @@ curl -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolk
 
 ### Solution 4: Environment Variables
 
-If you must use OpenSSL, set these environment variables:
+If you must use OpenSSL or need to configure allocators, set these environment variables:
 
 ```yaml
 # In your workflow
 env:
+  # OpenSSL configuration
   OPENSSL_STATIC: 1  # For musl targets
   OPENSSL_LIB_DIR: /usr/lib/x86_64-linux-gnu
   OPENSSL_INCLUDE_DIR: /usr/include/openssl
   PKG_CONFIG_ALLOW_CROSS: 1
+
+  # Memory allocator configuration
+  CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: true  # Better error messages
+
+  # For Windows cross-compilation
+  CC_i686_pc_windows_gnu: i686-w64-mingw32-gcc-posix
+  CXX_i686_pc_windows_gnu: i686-w64-mingw32-g++-posix
+  AR_i686_pc_windows_gnu: i686-w64-mingw32-ar
+
+  # Disable problematic features
+  CARGO_CFG_TARGET_FEATURE: ""  # Reset target features if needed
 ```
 
 ### Solution 5: Vendored OpenSSL
@@ -130,6 +186,22 @@ reqwest = { version = "0.12", features = ["rustls-tls"], default-features = fals
 reqwest = "0.12"
 ```
 
+### 2. Choose Cross-Platform Compatible Allocators
+
+```toml
+# ✅ Good - works across all platforms
+[dependencies]
+# Use default system allocator or jemallocator
+tikv-jemallocator = { version = "0.5", optional = true }
+
+[features]
+default = []
+jemalloc = ["tikv-jemallocator"]
+
+# ❌ Problematic - mimalloc has cross-compilation issues
+mimalloc = "0.1"  # Can fail on Windows cross-compilation
+```
+
 ### 2. Feature Flags for Flexibility
 
 ```toml
@@ -144,14 +216,36 @@ reqwest = { version = "0.12", default-features = false }
 
 ### 3. Cross-compilation Considerations
 
-For cross-compilation, rustls is much easier:
+For cross-compilation, prefer pure Rust implementations:
 
 ```toml
-# Works everywhere without system dependencies
+# ✅ Works everywhere without system dependencies
 reqwest = { version = "0.12", features = ["rustls-tls"], default-features = false }
 
-# Requires OpenSSL on target system
+# ✅ Cross-platform allocator
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5"
+
+# ❌ Requires OpenSSL on target system
 reqwest = { version = "0.12", features = ["native-tls"] }
+
+# ❌ Problematic for Windows cross-compilation
+mimalloc = "0.1"
+```
+
+### 4. Target-Specific Dependencies
+
+```toml
+# Use different allocators per platform
+[target.'cfg(unix)'.dependencies]
+tikv-jemallocator = "0.5"
+
+[target.'cfg(windows)'.dependencies]
+# Use system allocator on Windows to avoid cross-compilation issues
+
+[target.'cfg(target_env = "musl")'.dependencies]
+# Musl targets work well with most allocators
+tikv-jemallocator = "0.5"
 ```
 
 ## 🔍 Debugging

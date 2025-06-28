@@ -371,8 +371,14 @@ uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2
 - **[Best Practices Guide](docs/BEST_PRACTICES.md)** - How to choose and use the toolkit effectively
 - [Usage Guide](USAGE.md) - Detailed usage instructions
 - [Examples](examples/) - Complete project setups
+
+### 🔧 Troubleshooting Guides
+- [Cross-Compilation Issues](docs/CROSS_COMPILATION_ISSUES.md) - Comprehensive analysis and solutions
+- [Memory Allocator Issues](docs/MIMALLOC_TROUBLESHOOTING.md) - Fix mimalloc and other allocator problems
 - [OpenSSL Troubleshooting](docs/OPENSSL_TROUBLESHOOTING.md) - Resolve compilation issues
 - [GitHub Token Issues](docs/GITHUB_TOKEN_ISSUE.md) - Fix workflow permission problems
+
+### 🤝 Community
 - [Contributing](CONTRIBUTING.md) - How to contribute
 
 ## 🤝 Contributing

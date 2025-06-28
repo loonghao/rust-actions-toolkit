@@ -43,7 +43,14 @@ ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     # Windows-specific environment
     WINEARCH=win64 \
-    WINEPREFIX=/home/rust/.wine
+    WINEPREFIX=/home/rust/.wine \
+    # Fix mimalloc cross-compilation issues
+    CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix \
+    CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix \
+    AR_i686_pc_windows_gnu=i686-w64-mingw32-ar \
+    CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix \
+    CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix \
+    AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar
 
 # Install cross for additional target support
 RUN cargo install cross --locked

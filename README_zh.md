@@ -9,17 +9,17 @@
 
 [中文文档](README_zh.md) | [English](README.md)
 
-## �?特�?
+## ✨ 特性
 
-- **🔍 代码质量**: 自动化格式检查、代码检查和文档检�?
-- **🧪 测试**: �?Linux、macOS �?Windows 上进行跨平台测试
-- **🔒 安全**: 使用 cargo-audit 进行自动化漏洞扫�?
-- **📊 覆盖�?*: �?Codecov 集成的代码覆盖率报告
-- **🚀 发布**: 跨平台二进制发布和自动上�?
-- **🐍 Python**: Python wheel 构建和分�?
-- **📦 发布**: 使用 release-plz 自动发布�?crates.io
+- **🔍 代码质量**: 自动化格式检查、代码检查和文档检�?
+- **🧪 测试**: �?Linux、macOS �?Windows 上进行跨平台测试
+- **🔒 安全**: 使用 cargo-audit 进行自动化漏洞扫�?
+- **📊 覆盖�?*: �?Codecov 集成的代码覆盖率报告
+- **🚀 发布**: 跨平台二进制发布和自动上�?
+- **🐍 Python**: Python wheel 构建和分�?
+- **📦 发布**: 使用 release-plz 自动发布�?crates.io
 
-## 🚀 快速开�?
+## 🚀 快速开�?
 
 ### 简单的 CI 设置
 
@@ -36,7 +36,7 @@ jobs:
           command: ci
 ```
 
-### 跨平台发�?
+### 跨平台发�?
 
 ```yaml
 name: Release
@@ -66,76 +66,76 @@ jobs:
 
 ## 📋 输入参数
 
-| 输入 | 描述 | 必需 | 默认�?|
+| 输入 | 描述 | 必需 | 默认�?|
 |------|------|------|--------|
-| `command` | 运行的命令：`ci`、`release` �?`setup` | �?| `ci` |
-| `rust-toolchain` | Rust 工具链版�?| �?| `stable` |
-| `check-format` | 运行 cargo fmt --check（ci 命令�?| �?| `true` |
-| `check-clippy` | 运行 cargo clippy（ci 命令�?| �?| `true` |
-| `check-docs` | 运行 cargo doc（ci 命令�?| �?| `true` |
-| `target` | 发布的目标平�?| �?| 自动检�?|
-| `binary-name` | 要发布的二进制名�?| �?| 自动检�?|
-| `github-token` | 用于上传�?GitHub token | �?| `${{ github.token }}` |
+| `command` | 运行的命令：`ci`、`release` �?`setup` | �?| `ci` |
+| `rust-toolchain` | Rust 工具链版�?| �?| `stable` |
+| `check-format` | 运行 cargo fmt --check（ci 命令�?| �?| `true` |
+| `check-clippy` | 运行 cargo clippy（ci 命令�?| �?| `true` |
+| `check-docs` | 运行 cargo doc（ci 命令�?| �?| `true` |
+| `target` | 发布的目标平�?| �?| 自动检�?|
+| `binary-name` | 要发布的二进制名�?| �?| 自动检�?|
+| `github-token` | 用于上传�?GitHub token | �?| `${{ github.token }}` |
 
 ## 📤 输出
 
 | 输出 | 描述 |
 |------|------|
-| `rust-version` | 安装�?Rust 版本 |
-| `binary-path` | 构建的二进制文件路径（release 命令�?|
-| `wheel-path` | 构建�?Python wheel 路径（release 命令�?|
+| `rust-version` | 安装�?Rust 版本 |
+| `binary-path` | 构建的二进制文件路径（release 命令�?|
+| `wheel-path` | 构建�?Python wheel 路径（release 命令�?|
 
-## 🎯 支持的项目类�?
+## 🎯 支持的项目类�?
 
-- **�?Rust Crate**: 发布�?crates.io 的库项目
-- **二进�?Crate**: 带跨平台发布�?CLI 工具
-- **Python Wheels**: 使用 maturin �?Rust + Python 绑定项目
+- **�?Rust Crate**: 发布�?crates.io 的库项目
+- **二进�?Crate**: 带跨平台发布�?CLI 工具
+- **Python Wheels**: 使用 maturin �?Rust + Python 绑定项目
 
 ## 🔧 配置
 
-### CI 工作�?(`ci.yml`)
+### CI 工作�?(`ci.yml`)
 
 CI 工作流包括：
 
-- **代码格式�?* - `cargo fmt --check`
-- **代码检�?* - `cargo clippy`
-- **文档检�?* - `cargo doc`
-- **测试** - 跨平台测�?
+- **代码格式�?* - `cargo fmt --check`
+- **代码检�?* - `cargo clippy`
+- **文档检�?* - `cargo doc`
+- **测试** - 跨平台测�?
 - **安全审计** - `cargo audit`
-- **代码覆盖** - `cargo llvm-cov`（仅 PR�?
+- **代码覆盖** - `cargo llvm-cov`（仅 PR�?
 - **Python wheels** - 条件测试
 
-### 发布工作�?(`release.yml`)
+### 发布工作�?(`release.yml`)
 
 发布工作流支持：
 
-- **二进制发�?* - 跨平台编�?
-- **Python wheels** - 多平�?wheel 构建
+- **二进制发�?* - 跨平台编�?
+- **Python wheels** - 多平�?wheel 构建
 - **资产上传** - 自动 GitHub 发布资产
 
 ### Release-plz (`release-plz.yml`)
 
 自动化版本管理：
 
-- **版本升级** - 语义化版�?
+- **版本升级** - 语义化版�?
 - **变更日志生成** - 自动变更日志
 - **Crates.io 发布** - 自动发布
 - **GitHub 发布** - 发布创建
 
-## 🎯 支持的项�?
+## 🎯 支持的项�?
 
-此工具包专为以下类型项目设计�?
+此工具包专为以下类型项目设计�?
 
-- **vx shimexe** - 二进制工�?
+- **vx shimexe** - 二进制工�?
 - **py2pyd** - Python wheel 项目
 - **rez-tools** - CLI 实用工具
-- **rez-core** - 核心�?
+- **rez-core** - 核心�?
 
 ## 📚 示例
 
-查看 `examples/` 目录获取完整项目设置�?
+查看 `examples/` 目录获取完整项目设置�?
 
-- `pure-crate/` - �?crate 示例
+- `pure-crate/` - �?crate 示例
 - `binary-crate/` - CLI 工具示例
 - `python-wheel/` - Python 绑定示例
 
@@ -150,15 +150,15 @@ CI 工作流包括：
 
 ### 必需密钥
 
-在你�?GitHub 仓库中添加这些密钥：
+在你�?GitHub 仓库中添加这些密钥：
 
-- `CARGO_REGISTRY_TOKEN` - 你的 crates.io API token（用�?Rust crate 发布�?
+- `CARGO_REGISTRY_TOKEN` - 你的 crates.io API token（用�?Rust crate 发布�?
 - `CODECOV_TOKEN` - 你的 Codecov token（可选，用于覆盖率报告）
-- `RELEASE_PLZ_TOKEN` - 用于发布自动化的 GitHub PAT（可选，增强功能�?
+- `RELEASE_PLZ_TOKEN` - 用于发布自动化的 GitHub PAT（可选，增强功能�?
 
 ### 自动发布设置
 
-此工具包使用 **release-plz** 进行自动版本管理。创�?`release-plz.toml` 文件�?
+此工具包使用 **release-plz** 进行自动版本管理。创�?`release-plz.toml` 文件�?
 
 ```toml
 [workspace]
@@ -178,18 +178,18 @@ git_release_draft = false
 
 ### 工作流程
 
-1. **推送到 main** �?`release-plz.yml` 创建发布 PR
-2. **合并发布 PR** �?`release-plz.yml` 创建标签�?GitHub 发布
-3. **创建标签** �?`release.yml` 构建跨平台二进制文件
-4. **上传二进制文�?* �?用户可以�?GitHub 发布页面下载
+1. **推送到 main** �?`release-plz.yml` 创建发布 PR
+2. **合并发布 PR** �?`release-plz.yml` 创建标签�?GitHub 发布
+3. **创建标签** �?`release.yml` 构建跨平台二进制文件
+4. **上传二进制文�?* �?用户可以�?GitHub 发布页面下载
 
 ## 🤝 贡献
 
-欢迎贡献！请阅读我们的[贡献指南](CONTRIBUTING.md)�?
+欢迎贡献！请阅读我们的[贡献指南](CONTRIBUTING.md)�?
 
-## 📄 许可�?
+## 📄 许可�?
 
-此项目采�?MIT 许可�?- 查看 [LICENSE](LICENSE) 文件了解详情�?
+此项目采�?MIT 许可�?- 查看 [LICENSE](LICENSE) 文件了解详情�?
 
 ## 🔗 链接
 

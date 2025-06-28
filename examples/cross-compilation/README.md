@@ -1,14 +1,26 @@
-# Cross-Compilation with OpenSSL Support
+# Cross-Compilation with OpenSSL and Memory Allocator Support
 
-This example shows how to set up cross-compilation for Rust projects that depend on OpenSSL.
+This example shows how to set up cross-compilation for Rust projects that depend on OpenSSL or use memory allocators like mimalloc.
 
-## 🚨 Problem
+## 🚨 Common Problems
+
+### OpenSSL Issues
 
 When cross-compiling Rust projects with OpenSSL dependencies, you might encounter:
 
 ```
 error: failed to run custom build command for `openssl-sys v0.9.109`
 Could not find directory of OpenSSL installation
+```
+
+### Memory Allocator Issues
+
+When cross-compiling projects with memory allocators, you might encounter:
+
+```
+error: failed to run custom build command for `libmimalloc-sys v0.1.43`
+process didn't exit successfully: `build-script-build` (exit status: 1)
+TARGET = Some(i686-pc-windows-gnu)
 ```
 
 ## ✅ Solution
@@ -31,9 +43,20 @@ jobs:
 
 If you need custom cross-compilation setup:
 
+For OpenSSL issues:
 ```bash
-# Copy our Cross.toml template
+# Copy our Cross.toml template for OpenSSL
 curl -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross.toml
+```
+
+For memory allocator issues (mimalloc, etc.):
+```bash
+# Copy our enhanced Cross.toml for allocator support
+curl -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-mimalloc.toml
+
+# Build with cross
+cargo install cross
+cross build --target i686-pc-windows-gnu --release
 ```
 
 ### 3. Project structure
@@ -86,6 +109,53 @@ default = ["rustls"]
 rustls = ["reqwest/rustls-tls"]
 openssl = ["reqwest/native-tls"]
 vendored-openssl = ["openssl/vendored"]
+```
+
+### Cargo.toml with Cross-Platform Allocators
+
+```toml
+[package]
+name = "my-cross-platform-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Use rustls for TLS
+reqwest = { version = "0.12", features = ["rustls-tls"], default-features = false }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+
+# Cross-platform allocator (optional)
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = { version = "0.5", optional = true }
+
+[features]
+default = []
+jemalloc = ["tikv-jemallocator"]
+
+# Avoid mimalloc for cross-compilation compatibility
+# mimalloc = "0.1"  # ❌ Can cause issues with Windows cross-compilation
+```
+
+### Cargo.toml for Libraries (Flexible Allocator)
+
+```toml
+[package]
+name = "my-library"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+# Let users choose allocator
+[dependencies]
+tikv-jemallocator = { version = "0.5", optional = true }
+
+[features]
+default = []
+jemalloc = ["tikv-jemallocator"]
+# Don't include mimalloc as default due to cross-compilation issues
 ```
 
 ### CI Workflow
