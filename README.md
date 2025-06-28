@@ -193,6 +193,7 @@ git_release_draft = false
 - [Cross-Compilation Issues](docs/CROSS_COMPILATION_ISSUES.md) - Comprehensive analysis and solutions
 - [Memory Allocator Issues](docs/MIMALLOC_TROUBLESHOOTING.md) - Fix mimalloc and other allocator problems
 - [OpenSSL Troubleshooting](docs/OPENSSL_TROUBLESHOOTING.md) - Resolve compilation issues
+- [Workflow Robustness Fixes](docs/WORKFLOW_ROBUSTNESS_FIXES.md) - Fix cross-platform workflow issues
 - [GitHub Token Issues](docs/GITHUB_TOKEN_ISSUE.md) - Fix workflow permission problems
 - [GitHub Actions Linting](docs/GITHUB_ACTIONS_LINTING.md) - Validate workflow configurations
 

@@ -127,50 +127,68 @@ jobs:
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
 
-      - name: Detect binary name
+      - name: Detect binary name and check project type
         id: detect-binary
         shell: bash
         run: |
+          binary_name=""
+          should_upload="false"
+
+          # Step 1: Determine if this is a binary project
+          if [ ! -f "Cargo.toml" ]; then
+            echo "⚠️ No Cargo.toml found, skipping binary upload"
+            echo "should-upload=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Step 2: Determine binary name
           if [ -n "${{ inputs.binary-name }}" ] && [ "${{ inputs.binary-name }}" != "" ]; then
-            echo "binary-name=${{ inputs.binary-name }}" >> $GITHUB_OUTPUT
-            echo "✅ Using provided binary name: ${{ inputs.binary-name }}"
+            binary_name="${{ inputs.binary-name }}"
+            echo "✅ Using provided binary name: $binary_name"
+            should_upload="true"
           else
             echo "🔍 Auto-detecting binary name from Cargo.toml..."
 
-            if [ ! -f "Cargo.toml" ]; then
-              echo "❌ No Cargo.toml found and no binary-name provided"
-              echo "Please provide binary-name input or ensure Cargo.toml exists"
-              exit 1
-            fi
+            # Check if this project has binaries
+            has_bin_section=$(grep -c '^\[\[bin\]\]' Cargo.toml || echo "0")
+            has_main_rs=$([ -f "src/main.rs" ] && echo "1" || echo "0")
 
-            # Try multiple methods to extract binary name
-            binary_name=""
+            if [ "$has_bin_section" -gt 0 ] || [ "$has_main_rs" -eq 1 ]; then
+              echo "✅ Detected binary project (has [[bin]] sections or src/main.rs)"
+              should_upload="true"
 
-            # Method 1: Look for package name
-            binary_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
+              # Method 1: Look for package name
+              binary_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
 
-            # Method 2: If no package name, look for [[bin]] sections
-            if [ -z "$binary_name" ]; then
-              binary_name=$(grep -A 5 '^\[\[bin\]\]' Cargo.toml | grep '^name = ' | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
-            fi
+              # Method 2: If no package name, look for [[bin]] sections
+              if [ -z "$binary_name" ]; then
+                binary_name=$(grep -A 5 '^\[\[bin\]\]' Cargo.toml | grep '^name = ' | head -1 | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')
+              fi
 
-            # Method 3: Use directory name as fallback
-            if [ -z "$binary_name" ]; then
-              binary_name=$(basename "$(pwd)" | tr '-' '_')
-              echo "⚠️ Using directory name as fallback: $binary_name"
-            fi
+              # Method 3: Use directory name as fallback
+              if [ -z "$binary_name" ]; then
+                binary_name=$(basename "$(pwd)" | tr '-' '_')
+                echo "⚠️ Using directory name as fallback: $binary_name"
+              fi
 
-            if [ -n "$binary_name" ] && [ "$binary_name" != "" ]; then
-              echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
               echo "✅ Auto-detected binary name: $binary_name"
             else
-              echo "❌ Could not detect binary name from Cargo.toml"
-              echo "Please provide binary-name input explicitly"
-              exit 1
+              echo "ℹ️ This appears to be a library crate (no [[bin]] sections or src/main.rs)"
+              echo "Skipping binary upload - this is normal for library crates"
+              should_upload="false"
             fi
           fi
 
+          # Output results
+          echo "should-upload=$should_upload" >> $GITHUB_OUTPUT
+          if [ "$should_upload" = "true" ]; then
+            echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload binary assets
+        if: steps.detect-binary.outputs.should-upload == 'true'
+        id: upload-binary
+        continue-on-error: true
         uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: ${{ steps.detect-binary.outputs.binary-name }}
@@ -178,6 +196,27 @@ jobs:
           tar: all
           zip: windows
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Handle upload failure
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.upload-binary.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "⚠️ Binary upload failed for ${{ matrix.target }}"
+          echo "This could be due to:"
+          echo "  - Build failure for this target"
+          echo "  - Missing dependencies for cross-compilation"
+          echo "  - Binary name mismatch"
+          echo "  - Network issues"
+          echo ""
+          echo "The workflow will continue, but this target won't have binary assets"
+
+      - name: Skip binary upload (library crate)
+        if: steps.detect-binary.outputs.should-upload != 'true'
+        shell: bash
+        run: |
+          echo "ℹ️ Skipping binary upload for ${{ matrix.target }}"
+          echo "Reason: This appears to be a library crate without binaries"
+          echo "This is normal for library crates that don't produce executable binaries"
 
   # Build and upload Python wheels (conditional)
   upload-python-wheels:
@@ -239,11 +278,36 @@ jobs:
 
       - name: Build Python wheels
         if: steps.check-pyproject.outputs.exists == 'true'
+        id: build-wheels
+        continue-on-error: true
         run: maturin build --release --target ${{ matrix.target }}
 
       - name: Upload wheels to release
-        if: steps.check-pyproject.outputs.exists == 'true'
+        if: steps.check-pyproject.outputs.exists == 'true' && steps.build-wheels.outcome == 'success'
+        id: upload-wheels
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           files: target/wheels/*.whl
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Handle wheel build failure
+        if: steps.check-pyproject.outputs.exists == 'true' && steps.build-wheels.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "⚠️ Python wheel build failed for ${{ matrix.target }}"
+          echo "This could be due to:"
+          echo "  - Missing Python development headers"
+          echo "  - Cross-compilation issues"
+          echo "  - Incompatible target platform"
+          echo "  - Missing system dependencies"
+          echo ""
+          echo "The workflow will continue, but this target won't have Python wheels"
+
+      - name: Handle wheel upload failure
+        if: steps.check-pyproject.outputs.exists == 'true' && steps.build-wheels.outcome == 'success' && steps.upload-wheels.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "⚠️ Python wheel upload failed for ${{ matrix.target }}"
+          echo "Wheel was built successfully but upload failed"
+          echo "This could be due to network issues or GitHub API problems"

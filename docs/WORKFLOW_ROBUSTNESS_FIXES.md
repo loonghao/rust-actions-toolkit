@@ -208,6 +208,80 @@ The fixes are automatically tested in our CI pipeline:
 - [taiki-e/upload-rust-binary-action](https://github.com/taiki-e/upload-rust-binary-action)
 - [Cross-platform Workflow Best Practices](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners)
 
+### 3. Enhanced Graceful Failure Handling
+
+**Problem**: Workflows would fail completely if binary upload or wheel building failed.
+
+**Root Cause**:
+- No distinction between library crates and binary crates
+- No graceful handling of build failures
+- All-or-nothing approach to uploads
+
+**Solution**: Implemented smart project detection and graceful failure handling:
+
+```yaml
+# Smart project type detection
+- name: Detect binary name and check project type
+  run: |
+    # Check if this project has binaries
+    has_bin_section=$(grep -c '^\[\[bin\]\]' Cargo.toml || echo "0")
+    has_main_rs=$([ -f "src/main.rs" ] && echo "1" || echo "0")
+
+    if [ "$has_bin_section" -gt 0 ] || [ "$has_main_rs" -eq 1 ]; then
+      echo "should-upload=true" >> $GITHUB_OUTPUT
+    else
+      echo "should-upload=false" >> $GITHUB_OUTPUT
+    fi
+
+# Graceful failure handling
+- name: Upload binary assets
+  if: steps.detect-binary.outputs.should-upload == 'true'
+  continue-on-error: true  # Don't fail the entire workflow
+  uses: taiki-e/upload-rust-binary-action@v1
+
+- name: Handle upload failure
+  if: steps.upload-binary.outcome == 'failure'
+  run: |
+    echo "⚠️ Binary upload failed, but workflow continues"
+```
+
+## 🎯 Enhanced Best Practices
+
+### 4. Smart Project Type Detection
+
+```yaml
+# ✅ Good - detects project type automatically
+has_bin_section=$(grep -c '^\[\[bin\]\]' Cargo.toml || echo "0")
+has_main_rs=$([ -f "src/main.rs" ] && echo "1" || echo "0")
+
+if [ "$has_bin_section" -gt 0 ] || [ "$has_main_rs" -eq 1 ]; then
+  echo "Binary project detected"
+else
+  echo "Library project detected, skipping binary upload"
+fi
+
+# ❌ Bad - assumes all projects have binaries
+echo "binary-name=my-app" >> $GITHUB_OUTPUT
+```
+
+### 5. Graceful Failure Handling
+
+```yaml
+# ✅ Good - continues on failure with helpful messages
+- name: Upload assets
+  continue-on-error: true
+  id: upload
+  uses: some-action@v1
+
+- name: Handle failure
+  if: steps.upload.outcome == 'failure'
+  run: echo "Upload failed, but workflow continues"
+
+# ❌ Bad - fails entire workflow
+- name: Upload assets
+  uses: some-action@v1  # Will fail entire workflow if this fails
+```
+
 ## 💡 Prevention
 
 To prevent similar issues in the future:
@@ -218,3 +292,6 @@ To prevent similar issues in the future:
 4. **Test on all target platforms** (Linux, macOS, Windows)
 5. **Use clear error messages** with actionable guidance
 6. **Follow the linting guidelines** in our actionlint configuration
+7. **Implement graceful failure handling** with `continue-on-error`
+8. **Detect project types** before attempting operations
+9. **Provide informative failure messages** for debugging
