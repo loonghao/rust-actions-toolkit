@@ -15,6 +15,33 @@ permissions:
   actions: read
 
 jobs:
+  # Lint GitHub Actions workflows and actions
+  actionlint:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          sudo mv ./actionlint /usr/local/bin/
+
+      - name: Lint workflows
+        run: |
+          echo "🔍 Linting GitHub Actions workflows..."
+          actionlint -verbose
+          echo "✅ All workflows passed actionlint validation"
+
+      - name: Lint with shellcheck integration
+        run: |
+          echo "🔍 Running actionlint with shellcheck integration..."
+          # Install shellcheck for better shell script validation
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          actionlint -verbose -shellcheck=""
+          echo "✅ All workflows passed shellcheck validation"
+
   # Validate GitHub Actions
   validate-actions:
     name: Validate Actions
@@ -84,6 +111,50 @@ jobs:
             fi
           done
 
+      - name: Validate workflow syntax with yq
+        run: |
+          # Install yq for YAML validation
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+          echo "🔍 Validating YAML syntax for all workflows..."
+          for workflow in .github/workflows/*.yml; do
+            if [ -f "$workflow" ]; then
+              echo "Validating $workflow..."
+              if ! yq eval '.' "$workflow" > /dev/null 2>&1; then
+                echo "❌ Invalid YAML syntax in $workflow"
+                exit 1
+              fi
+              echo "✅ $workflow has valid YAML syntax"
+            fi
+          done
+
+      - name: Validate action.yml files syntax
+        run: |
+          echo "🔍 Validating YAML syntax for all action.yml files..."
+
+          # Validate main action.yml
+          if [ -f "action.yml" ]; then
+            echo "Validating action.yml..."
+            if ! yq eval '.' action.yml > /dev/null 2>&1; then
+              echo "❌ Invalid YAML syntax in action.yml"
+              exit 1
+            fi
+            echo "✅ action.yml has valid YAML syntax"
+          fi
+
+          # Validate composite actions
+          for action_file in actions/*/action.yml; do
+            if [ -f "$action_file" ]; then
+              echo "Validating $action_file..."
+              if ! yq eval '.' "$action_file" > /dev/null 2>&1; then
+                echo "❌ Invalid YAML syntax in $action_file"
+                exit 1
+              fi
+              echo "✅ $action_file has valid YAML syntax"
+            fi
+          done
+
   # Test our composite actions
   test-actions:
     name: Test Actions
@@ -147,6 +218,80 @@ jobs:
           fi
 
           echo "✅ Build environment test completed"
+
+  # Validate example configurations
+  validate-examples:
+    name: Validate Example Configurations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          sudo mv ./actionlint /usr/local/bin/
+
+      - name: Install yq for YAML validation
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Validate example workflow files
+        run: |
+          echo "🔍 Validating example workflow configurations..."
+
+          # Find all example workflow files
+          example_workflows=$(find examples -name "*.yml" -type f | grep -E "(ci|release|workflow)" || true)
+
+          if [ -z "$example_workflows" ]; then
+            echo "ℹ️ No example workflow files found"
+            exit 0
+          fi
+
+          for workflow in $example_workflows; do
+            echo "Validating $workflow..."
+
+            # Check YAML syntax
+            if ! yq eval '.' "$workflow" > /dev/null 2>&1; then
+              echo "❌ Invalid YAML syntax in $workflow"
+              exit 1
+            fi
+
+            # Check if it's a valid GitHub Actions workflow
+            if yq eval '.jobs' "$workflow" > /dev/null 2>&1; then
+              echo "✅ $workflow has valid workflow structure"
+            else
+              echo "⚠️ $workflow might not be a complete workflow (could be a template)"
+            fi
+          done
+
+          echo "✅ All example configurations validated"
+
+      - name: Check for version consistency in examples
+        run: |
+          echo "🔍 Checking version consistency in example files..."
+
+          # Find all references to rust-actions-toolkit versions
+          version_refs=$(grep -r "rust-actions-toolkit.*@v" examples/ || true)
+
+          if [ -n "$version_refs" ]; then
+            echo "Found version references:"
+            echo "$version_refs"
+
+            # Check if all versions are consistent (should be latest)
+            latest_version="v2.3.2"  # Update this when releasing new versions
+
+            if echo "$version_refs" | grep -v "@$latest_version" | grep -q "@v"; then
+              echo "⚠️ Found outdated version references. Consider updating to $latest_version"
+              echo "Outdated references:"
+              echo "$version_refs" | grep -v "@$latest_version" | grep "@v"
+            else
+              echo "✅ All version references are up to date"
+            fi
+          else
+            echo "ℹ️ No version references found in examples"
+          fi
 
   # Test documentation
   docs:

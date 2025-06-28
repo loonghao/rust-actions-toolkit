@@ -1,0 +1,69 @@
+# actionlint configuration for rust-actions-toolkit
+# https://github.com/rhysd/actionlint/blob/main/docs/config.md
+
+# Enable shellcheck integration for shell script validation
+shellcheck:
+  enable: true
+  # Exclude some shellcheck rules that are not relevant for GitHub Actions
+  exclude-ids:
+    - SC2034  # Variable appears unused (common in GitHub Actions)
+    - SC1091  # Not following sourced files (not relevant for Actions)
+
+# Pyflakes integration (if we have Python scripts)
+pyflakes:
+  enable: false  # We don't have Python scripts in workflows
+
+# Custom rules configuration
+rules:
+  # Allow using latest tag for some trusted actions
+  action-ref:
+    # Allow @main for dtolnay/rust-toolchain as it's stable
+    exclude:
+      - "dtolnay/rust-toolchain@main"
+      - "dtolnay/rust-toolchain@master"
+  
+  # Expression validation
+  expression:
+    # Allow complex expressions in our workflows
+    strict: false
+  
+  # Job dependencies validation
+  job-needs:
+    # Ensure job dependencies are valid
+    strict: true
+  
+  # Matrix validation
+  matrix:
+    # Validate matrix configurations
+    strict: true
+  
+  # Permissions validation
+  permissions:
+    # Ensure permissions are properly set
+    strict: true
+  
+  # Runner label validation
+  runner-label:
+    # Allow custom runner labels if needed
+    strict: false
+
+# Ignore specific files or patterns
+ignore:
+  # Ignore example files that might be templates
+  - "examples/*/template-*.yml"
+  - "examples/*/draft-*.yml"
+  
+  # Ignore backup files
+  - "**/*.bak"
+  - "**/*~"
+
+# Self-hosted runner configuration (if we use them)
+self-hosted-runner:
+  # We use GitHub-hosted runners
+  labels: []
+
+# Configuration schema validation
+config-variables:
+  # Define expected configuration variables
+  # This helps validate workflow_call inputs
+  strict: false
