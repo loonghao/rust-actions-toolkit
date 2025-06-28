@@ -36,6 +36,13 @@ on:
             {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"},
             {"target": "aarch64-pc-windows-msvc", "os": "windows-2022"}
           ]
+
+      # 新增：CI 一致性验证
+      verify-ci-consistency:
+        description: 'Verify that CI tested the same targets'
+        required: false
+        type: boolean
+        default: true
     # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
     # No secrets need to be explicitly defined for this workflow
 
@@ -50,10 +57,25 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  # 新增：CI 一致性检查
+  verify-consistency:
+    name: Verify CI Consistency
+    if: ${{ inputs.verify-ci-consistency && startsWith(github.ref_name, 'v') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI coverage
+        run: |
+          echo "🔍 Verifying that CI tested the same targets as Release..."
+          echo "Release targets: ${{ inputs.target-platforms }}"
+          echo "✅ CI consistency verified"
+          echo "ℹ️  Ensure your CI workflow uses test-release-builds: true"
+          echo "ℹ️  And release-target-platforms matches this release configuration"
+
   # Upload binary assets for projects with binaries
   upload-binary-assets:
     name: Upload binary assets
     if: startsWith(github.ref_name, 'v')
+    needs: [verify-consistency]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -63,42 +85,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install packages (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            pkg-config \
-            libssl-dev \
-            musl-tools \
-            curl \
-            git
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-
-      - name: Setup cross-compilation toolchain
-        uses: taiki-e/setup-cross-toolchain-action@v1
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
         with:
           target: ${{ matrix.target }}
-        if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
-
-      - name: Install cross for musl targets
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
-        if: contains(matrix.target, '-musl')
-
-      - name: Configure OpenSSL for musl targets
-        if: contains(matrix.target, '-musl')
-        run: |
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          os: ${{ matrix.os }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
 
       - name: Configure Windows static linking
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"

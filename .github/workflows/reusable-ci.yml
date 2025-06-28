@@ -31,6 +31,27 @@ on:
         required: false
         type: string
         default: '[]'
+
+      # 新增：构建深度配置
+      build-depth:
+        description: 'Build depth: basic, release, full'
+        required: false
+        type: string
+        default: 'basic'
+
+      # 新增：是否测试发布构建
+      test-release-builds:
+        description: 'Test release builds to match release workflow'
+        required: false
+        type: boolean
+        default: false
+
+      # 新增：发布目标平台（用于一致性测试）
+      release-target-platforms:
+        description: 'Target platforms to test (should match release workflow)'
+        required: false
+        type: string
+        default: '[]'
     secrets:
       CODECOV_TOKEN:
         description: 'Codecov token for coverage reporting'
@@ -186,6 +207,52 @@ jobs:
       - name: Run tests (with cross)
         if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
         run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
+
+  # 新增：发布构建一致性测试
+  test-release-consistency:
+    name: Release Build Consistency Test - ${{ matrix.target }}
+    if: ${{ inputs.test-release-builds }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(inputs.release-target-platforms) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
+        with:
+          target: ${{ matrix.target }}
+          os: ${{ matrix.os }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Test release build (mirrors release workflow)
+        run: |
+          echo "🔨 Testing release build for ${{ matrix.target }}..."
+
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            echo "Using cross for musl target"
+            cross build --release --target ${{ matrix.target }}
+          else
+            echo "Using cargo for native target"
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+          echo "✅ Release build successful for ${{ matrix.target }}"
+
+      - name: Verify binary (optional)
+        if: ${{ inputs.build-depth == 'full' }}
+        run: |
+          echo "🔍 Verifying generated binary..."
+
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            find target/${{ matrix.target }}/release -name "*.exe" -type f | head -5 | xargs file
+          else
+            find target/${{ matrix.target }}/release -maxdepth 1 -type f -executable | head -5 | xargs file
+          fi
 
   # Security audit using rustsec database
   security_audit:

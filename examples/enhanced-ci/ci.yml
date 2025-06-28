@@ -1,0 +1,44 @@
+# Enhanced CI Configuration Example
+# This example shows how to use the improved rust-actions-toolkit
+# with release build consistency testing
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  actions: read          # For security audit
+  security-events: write # For security audit
+
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.3.0
+    with:
+      rust-toolchain: stable
+      enable-coverage: false
+      enable-python-wheel: false
+      
+      # 启用发布构建测试以确保一致性
+      test-release-builds: true
+      build-depth: release  # basic, release, full
+      
+      # 使用与 release.yml 相同的目标平台
+      # 这确保了 CI 和 Release 的一致性
+      release-target-platforms: |
+        [
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+        ]
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

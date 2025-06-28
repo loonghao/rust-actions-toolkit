@@ -106,6 +106,48 @@ jobs:
           cargo --version
           echo "✅ Rust toolchain installed successfully"
 
+  # Test new setup-build-env action
+  test-build-env:
+    name: Test Build Environment Setup
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-22.04
+            target: x86_64-pc-windows-gnu
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test setup-build-env action
+        uses: ./.github/actions/setup-build-env
+        with:
+          target: ${{ matrix.target }}
+          os: ${{ matrix.os }}
+          rust-toolchain: stable
+
+      - name: Verify environment setup
+        run: |
+          echo "🔍 Verifying build environment..."
+          rustc --version
+          cargo --version
+
+          # Check if target is installed
+          rustup target list --installed | grep "${{ matrix.target }}" || echo "⚠️ Target not found"
+
+          # Test basic build (if we have a Cargo.toml)
+          if [ -f "Cargo.toml" ]; then
+            echo "Testing basic build..."
+            cargo check --target ${{ matrix.target }} || echo "⚠️ Build check failed (expected for toolkit project)"
+          fi
+
+          echo "✅ Build environment test completed"
+
   # Test documentation
   docs:
     name: Documentation

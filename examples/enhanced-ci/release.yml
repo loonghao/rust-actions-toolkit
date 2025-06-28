@@ -1,0 +1,35 @@
+# Enhanced Release Configuration Example
+# This example shows how to use the improved rust-actions-toolkit
+# with CI consistency verification
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # For uploading release assets
+
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.3.0
+    with:
+      binary-name: "my-app"  # Replace with your binary name
+      rust-toolchain: stable
+      enable-python-wheels: false
+      verify-ci-consistency: true  # 新增：验证 CI 一致性
+      
+      # 目标平台配置 - 应与 ci.yml 中的 release-target-platforms 匹配
+      target-platforms: |
+        [
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+        ]
+    secrets: inherit
