@@ -12,24 +12,35 @@ Previously, there was a disconnect between CI and Release workflows:
 
 ## ✅ Solutions Implemented
 
-### 1. Unified Build Environment Action
+### 1. Unified Build Environment Setup
 
-**File**: `.github/actions/setup-build-env/action.yml`
+**Implementation**: Inline build environment setup in reusable workflows
 
 **Features**:
 - Consistent environment setup for both CI and Release
 - Automatic Cross.toml configuration with mimalloc support
 - Proper toolchain configuration for all target platforms
 - Environment variable setup for cross-compilation
+- No external action dependencies (follows 2025 best practices)
 
-**Usage**:
+**Implementation**:
 ```yaml
-- name: Setup build environment
-  uses: ./.github/actions/setup-build-env
+- name: Install system packages (Ubuntu)
+  if: startsWith(matrix.os, 'ubuntu')
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y build-essential pkg-config libssl-dev musl-tools
+
+- name: Install Rust toolchain
+  uses: dtolnay/rust-toolchain@master
   with:
-    target: x86_64-pc-windows-gnu
-    os: ubuntu-22.04
-    rust-toolchain: stable
+    toolchain: stable
+    targets: ${{ matrix.target }}
+
+- name: Configure environment variables
+  run: |
+    echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
+    # Additional environment setup...
 ```
 
 ### 2. Enhanced Reusable CI Workflow
@@ -53,7 +64,7 @@ Previously, there was a disconnect between CI and Release workflows:
 
 **New Features**:
 - `verify-ci-consistency`: Validates CI tested same targets
-- Uses unified build environment action
+- Uses identical inline build environment setup as CI
 - Dependency on consistency verification
 
 **Benefits**:

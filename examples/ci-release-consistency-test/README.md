@@ -40,7 +40,7 @@ target-platforms: |
 ```
 
 ### 3. Environment Consistency
-- Both CI and Release use the same `setup-build-env` action
+- Both CI and Release use identical inline build environment setup
 - Identical Cross.toml configuration with mimalloc support
 - Same environment variables and toolchain setup
 
@@ -60,7 +60,7 @@ verify-ci-consistency: true
 
 ### Release Workflow
 1. **Consistency verification**: Ensures CI tested same targets
-2. **Unified environment**: Uses same setup-build-env action as CI
+2. **Unified environment**: Uses identical inline build environment setup as CI
 3. **Predictable results**: No surprises since CI already tested everything
 
 ## 📊 Benefits

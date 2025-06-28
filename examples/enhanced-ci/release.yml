@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.3.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.3.1
     with:
       binary-name: "my-app"  # Replace with your binary name
       rust-toolchain: stable

@@ -222,12 +222,83 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup build environment
-        uses: loonghao/rust-actions-toolkit/actions/setup-build-env@v2.3.0
+      - name: Install system packages (Ubuntu)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            musl-tools \
+            curl \
+            git \
+            file
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          targets: ${{ matrix.target }}
+
+      - name: Setup cross-compilation toolchain (non-musl)
+        uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-          os: ${{ matrix.os }}
-          rust-toolchain: ${{ inputs.rust-toolchain }}
+        if: |
+          startsWith(matrix.os, 'ubuntu') &&
+          !contains(matrix.target, '-musl')
+        continue-on-error: true
+
+      - name: Install cross for musl targets
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+        if: contains(matrix.target, '-musl')
+
+      - name: Configure environment variables
+        run: |
+          # Set common environment variables
+          echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
+          echo "RUST_BACKTRACE=1" >> $GITHUB_ENV
+          echo "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true" >> $GITHUB_ENV
+
+          # OpenSSL configuration (musl targets)
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
+            echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          fi
+
+          # Windows cross-compilation configuration (fixes mimalloc issues)
+          if [[ "${{ matrix.target }}" == *"windows-gnu"* ]]; then
+            if [[ "${{ matrix.target }}" == "i686-pc-windows-gnu" ]]; then
+              echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix" >> $GITHUB_ENV
+              echo "CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix" >> $GITHUB_ENV
+              echo "AR_i686_pc_windows_gnu=i686-w64-mingw32-ar" >> $GITHUB_ENV
+            elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
+              echo "CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix" >> $GITHUB_ENV
+              echo "CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix" >> $GITHUB_ENV
+              echo "AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar" >> $GITHUB_ENV
+            fi
+          fi
+
+          # Windows MSVC configuration
+          if [[ "${{ matrix.target }}" == *"windows-msvc"* ]]; then
+            echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+          fi
+
+      - name: Configure Cross.toml
+        run: |
+          # Ensure Cross.toml exists and is properly configured
+          if [ ! -f "Cross.toml" ]; then
+            echo "Creating default Cross.toml for cross-compilation..."
+            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-mimalloc.toml
+            echo "✅ Downloaded enhanced Cross.toml with mimalloc support"
+          else
+            echo "Cross.toml already exists, skipping creation"
+          fi
 
       - name: Test release build (mirrors release workflow)
         run: |

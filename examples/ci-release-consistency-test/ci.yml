@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.3.0
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.3.1
     with:
       rust-toolchain: stable
       enable-coverage: false
