@@ -191,6 +191,7 @@ git_release_draft = false
 
 ### 🔧 Troubleshooting Guides
 - [Cross-Compilation Issues](docs/CROSS_COMPILATION_ISSUES.md) - Comprehensive analysis and solutions
+- [Proc-Macro Cross-Compilation](docs/PROC_MACRO_CROSS_COMPILATION.md) - Fix proc-macro cross-compilation issues
 - [Memory Allocator Issues](docs/MIMALLOC_TROUBLESHOOTING.md) - Fix mimalloc and other allocator problems
 - [OpenSSL Troubleshooting](docs/OPENSSL_TROUBLESHOOTING.md) - Resolve compilation issues
 - [Workflow Robustness Fixes](docs/WORKFLOW_ROBUSTNESS_FIXES.md) - Fix cross-platform workflow issues

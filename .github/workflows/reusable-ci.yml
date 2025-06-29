@@ -241,6 +241,12 @@ jobs:
           toolchain: ${{ inputs.rust-toolchain }}
           targets: ${{ matrix.target }}
 
+      - name: Install host toolchain for proc-macros
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          targets: x86_64-unknown-linux-gnu
+
       - name: Setup cross-compilation toolchain (non-musl)
         uses: taiki-e/setup-cross-toolchain-action@v1
         with:
@@ -290,16 +296,31 @@ jobs:
             echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
           fi
 
+          # Configure proc-macro cross-compilation
+          HOST_TARGET="x86_64-unknown-linux-gnu"
+          if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
+            echo "🔄 Configuring proc-macro cross-compilation"
+            echo "📦 Proc-macros will be built for host: $HOST_TARGET"
+            echo "🎯 Target platform: ${{ matrix.target }}"
+
+            # Set environment for proper proc-macro handling
+            echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
+            echo "CARGO_TARGET_${HOST_TARGET//-/_}_RUNNER=" >> $GITHUB_ENV
+          fi
+
       - name: Configure Cross.toml
         shell: bash
         run: |
           # Ensure Cross.toml exists and is properly configured
           if [ ! -f "Cross.toml" ]; then
             echo "Creating default Cross.toml for cross-compilation..."
-            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-mimalloc.toml
-            echo "✅ Downloaded enhanced Cross.toml with mimalloc support"
+            echo "🔧 Using proc-macro-fixed configuration to resolve cross-compilation issues"
+            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-proc-macro-fixed.toml
+            echo "✅ Downloaded enhanced Cross.toml with proc-macro and mimalloc support"
           else
             echo "Cross.toml already exists, skipping creation"
+            echo "⚠️ Note: Ensure your Cross.toml properly handles proc-macro cross-compilation"
+            echo "   Proc-macros should be built for host platform, not target platform"
           fi
 
       - name: Test release build (mirrors release workflow)
