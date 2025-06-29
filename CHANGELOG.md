@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.3] - 2025-06-29
+
+### 🐛 Critical Reusable Workflow Proc-Macro Fix
+
+#### Problem Identified
+- **reusable-release.yml** was clearing environment variables without restoring proc-macro protection
+- **turbo-cdn project** and similar projects using reusable workflows still experienced proc-macro errors
+- **Environment variable conflicts** between workflow steps
+
+#### Technical Fixes
+- **Enhanced reusable-release.yml**: Added `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""` protection
+- **Persistent Environment**: Ensured proc-macro protection survives environment clearing
+- **Cross-compilation Safety**: Maintained proc-macro protection throughout build process
+- **Turbo-CDN Specific**: Added specialized Cross.toml configuration for complex proc-macro scenarios
+
+#### New Resources
+- `examples/cross-compilation/turbo-cdn-Cross.toml` - Specialized configuration for complex projects
+- Enhanced reusable workflow proc-macro protection
+- Persistent environment variable management
+
+### 🎯 Specific Fixes
+- **serde + async-trait + thiserror + clap**: All proc-macro combinations now work correctly
+- **Reusable workflows**: Fixed environment variable persistence
+- **Complex projects**: Added specialized Cross.toml examples
+
+### 🔄 Migration
+**No action required** - enhanced automatic fix:
+```yaml
+# Reusable workflows now include enhanced protection
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3
+```
+
 ## [3.0.2] - 2025-06-29
 
 ### 🐛 Enhanced Proc-Macro Cross-Compilation Fix
