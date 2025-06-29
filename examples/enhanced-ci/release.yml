@@ -18,18 +18,19 @@ jobs:
       binary-name: "my-app"  # Replace with your binary name
       rust-toolchain: stable
       enable-python-wheels: false
-      verify-ci-consistency: true  # 新增：验证 CI 一致性
-      
-      # 目标平台配置 - 应与 ci.yml 中的 release-target-platforms 匹配
+      verify-ci-consistency: true  # New: Verify CI consistency
+
+      # Target platform configuration - should match release-target-platforms in ci.yml
+      # Optimized platform list based on 2025 mainstream Rust project best practices
       target-platforms: |
         [
-          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-apple-darwin", "os": "macos-13"},
-          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "high"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022", "priority": "high"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04", "priority": "low"}
         ]
     secrets: inherit

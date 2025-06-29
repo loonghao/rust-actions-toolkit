@@ -29,25 +29,24 @@ RUN chown -R rust:rust /usr/local/cargo && \
 
 USER rust
 
-# Install essential Rust targets (comprehensive set for cross-compilation)
+# Install essential Rust targets (optimized for 2025 mainstream platforms)
 # Install targets in separate layers for better caching
-RUN rustup target add x86_64-pc-windows-gnu i686-pc-windows-gnu
-RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+# Core platforms (highest priority)
 RUN rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 RUN rustup target add x86_64-apple-darwin aarch64-apple-darwin
+RUN rustup target add x86_64-pc-windows-msvc
+# Static linking platforms (important for zero-dependency builds)
+RUN rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+# GNU Windows (lower priority, but useful for specific use cases)
+RUN rustup target add x86_64-pc-windows-gnu
 
 # Configure cross-compilation linkers for essential targets
 ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
-    CARGO_TARGET_I686_PC_WINDOWS_GNU_LINKER=i686-w64-mingw32-gcc \
-    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_LINKER=i686-linux-gnu-gcc \
     CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc \
     # Windows-specific environment
     WINEARCH=win64 \
     WINEPREFIX=/home/rust/.wine \
-    # Fix mimalloc cross-compilation issues
-    CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix \
-    CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix \
-    AR_i686_pc_windows_gnu=i686-w64-mingw32-ar \
+    # Fix mimalloc cross-compilation issues for GNU targets
     CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix \
     CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix \
     AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar
@@ -63,9 +62,10 @@ USER rust
 
 # Zero-dependency build configuration for all targets
 ENV RUSTFLAGS_BASE="-C target-feature=+crt-static" \
-    # Windows static linking
+    # Windows static linking (GNU targets)
     CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C target-feature=+crt-static -C link-args=-static" \
-    CARGO_TARGET_I686_PC_WINDOWS_GNU_RUSTFLAGS="-C target-feature=+crt-static -C link-args=-static" \
+    # Windows MSVC static linking
+    CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS="-C target-feature=+crt-static" \
     # Linux musl static linking (already static by default, but ensure it)
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static" \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static" \

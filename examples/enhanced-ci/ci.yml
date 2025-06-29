@@ -23,22 +23,23 @@ jobs:
       enable-coverage: false
       enable-python-wheel: false
       
-      # 启用发布构建测试以确保一致性
+      # Enable release build testing to ensure consistency
       test-release-builds: true
       build-depth: release  # basic, release, full
-      
-      # 使用与 release.yml 相同的目标平台
-      # 这确保了 CI 和 Release 的一致性
+
+      # Use the same target platforms as release.yml
+      # This ensures CI and Release consistency
+      # Optimized platform list based on 2025 mainstream Rust project best practices
       release-target-platforms: |
         [
-          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-apple-darwin", "os": "macos-13"},
-          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "high"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022", "priority": "high"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04", "priority": "low"}
         ]
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

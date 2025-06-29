@@ -34,18 +34,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Zero-dependency Windows builds (aligned with Docker base image)
-          - { os: ubuntu-latest, target: x86_64-pc-windows-gnu }
-          - { os: ubuntu-latest, target: i686-pc-windows-gnu }
-          # Static Linux builds (no dependencies)
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl }
-          # Standard builds (dynamic linking)
-          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
-          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu }
-          # macOS builds
+          # Core platforms (Tier 1) - Essential for all projects
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
           - { os: macos-13, target: x86_64-apple-darwin }
           - { os: macos-13, target: aarch64-apple-darwin }
+          - { os: windows-2022, target: x86_64-pc-windows-msvc }  # 2025 mainstream Windows
+
+          # Important platforms (Tier 2) - Recommended for most projects
+          - { os: ubuntu-22.04, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-musl }
+          - { os: ubuntu-22.04, target: aarch64-unknown-linux-musl }
+
+          # Optional platforms (Tier 3) - For specific use cases
+          - { os: ubuntu-22.04, target: x86_64-pc-windows-gnu }  # Zero-dependency Windows
 
     steps:
       - uses: actions/checkout@v4
@@ -57,8 +58,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ matrix.target }}
 
-# That's the entire workflow!
-# 
+# That's the entire workflow! (2025 Optimized)
+#
 # What happens automatically:
 # 1. Detects project name from Cargo.toml
 # 2. Detects if it's a binary, Python extension, or hybrid project
@@ -68,6 +69,12 @@ jobs:
 # 6. Generates release notes
 # 7. Handles prerelease detection from tag names
 #
+# Platform Strategy (Based on 2025 Market Research):
+# - Tier 1 (Core): Linux GNU, macOS (Intel/ARM), Windows MSVC
+# - Tier 2 (Important): Linux ARM64, Linux musl (static builds)
+# - Tier 3 (Optional): Windows GNU (zero-dependency builds)
+# - Removed: 32-bit Windows (deprecated in 2025)
+#
 # Supported project types:
 # - Binary projects (src/main.rs or [[bin]] in Cargo.toml)
 # - Python extensions (pyproject.toml)
@@ -75,11 +82,12 @@ jobs:
 # - Library projects (no binary artifacts)
 #
 # Examples of what gets built:
-# 
+#
 # Binary project (e.g., py2pyd):
 # - py2pyd-x86_64-unknown-linux-gnu.tar.gz
-# - py2pyd-x86_64-pc-windows-gnu.zip
+# - py2pyd-x86_64-pc-windows-msvc.zip  # Updated: MSVC is now default
 # - py2pyd-x86_64-apple-darwin.tar.gz
+# - py2pyd-aarch64-apple-darwin.tar.gz
 #
 # Python extension project:
 # - my_extension-1.0.0-cp311-cp311-linux_x86_64.whl
