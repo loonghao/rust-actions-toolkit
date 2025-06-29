@@ -21,7 +21,7 @@
 
 ## 🚀 Quick Start
 
-### 🌟 Recommended: Reusable Workflows (v2.5.3+)
+### 🌟 Recommended: Reusable Workflows (v2.5.5+)
 
 **Best for: Modern projects with CI/Release consistency**
 
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.5
     with:
       rust-toolchain: stable
       # 🎯 KEY: Specify release targets for consistency testing
@@ -60,7 +60,7 @@ permissions:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.5
     with:
       # 🎯 KEY: Use SAME targets as CI for consistency
       target-platforms: |
@@ -76,7 +76,7 @@ jobs:
 **✨ What You Get:**
 - ✅ **Automatic Release Build Consistency Testing** - CI tests exact same targets as release
 - ✅ **Early Cross-Compilation Issue Detection** - Catch problems before release
-- ✅ **Proc-Macro Cross-Compilation Support** - Works with serde, tokio, async-trait, etc.
+- ✅ **Complete Proc-Macro Cross-Compilation Support** - Fixed async-trait, serde, tokio, etc.
 - ✅ **Zero-Configuration Defaults** - Smart defaults that work out of the box
 - ✅ **Comprehensive Platform Support** - Linux, Windows, macOS, musl, ARM64
 
