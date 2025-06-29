@@ -44,7 +44,7 @@ on:
         description: 'Test release builds to match release workflow'
         required: false
         type: boolean
-        default: false
+        default: true
 
       # Enhanced: Release target platforms for consistency testing
       release-target-platforms:
