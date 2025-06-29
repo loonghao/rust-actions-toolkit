@@ -21,7 +21,7 @@
 
 ## 🚀 Quick Start
 
-### 🌟 Recommended: Reusable Workflows (v2.5.5+)
+### 🌟 Recommended: Reusable Workflows (v2.5.6+)
 
 **Best for: Modern projects with CI/Release consistency**
 
@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.5
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.6
     with:
       rust-toolchain: stable
       # 🎯 KEY: Specify release targets for consistency testing
@@ -60,7 +60,7 @@ permissions:
 
 jobs:
   release:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.5
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.6
     with:
       # 🎯 KEY: Use SAME targets as CI for consistency
       target-platforms: |
@@ -189,7 +189,7 @@ This toolkit is designed for projects like:
 - **rez-tools** - CLI utilities
 - **rez-core** - Core libraries
 
-## ⚙️ Configuration Guide (v2.5.3)
+## ⚙️ Configuration Guide (v2.5.6)
 
 ### 🎯 Project Types
 
@@ -198,7 +198,7 @@ This toolkit is designed for projects like:
 # .github/workflows/ci.yml
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.6
     with:
       rust-toolchain: stable
       enable-coverage: true
@@ -214,7 +214,7 @@ jobs:
 ```yaml
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.6
     with:
       rust-toolchain: stable
       enable-coverage: true
@@ -231,7 +231,7 @@ jobs:
 ```yaml
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.6
     with:
       rust-toolchain: stable
       enable-coverage: true
@@ -245,7 +245,7 @@ jobs:
 ```yaml
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.6
     with:
       # Toolchain
       rust-toolchain: stable
@@ -257,7 +257,7 @@ jobs:
 
       # Build configuration
       build-depth: release  # basic | release | full
-      test-release-builds: true  # Default: true in v2.5.3
+      test-release-builds: true  # Default: true in v2.5.6
       verify-ci-consistency: true
 
       # Cross-compilation targets
@@ -343,8 +343,8 @@ git_release_draft = false
 - [Examples](examples/) - Complete project setups
 
 ### 📚 Documentation & Best Practices
-- [Best Practices for v2.5.3](docs/BEST_PRACTICES_V2_5_3.md) - **Comprehensive configuration guide and best practices**
-- [Migration Guide to v2.5.3](docs/MIGRATION_TO_V2_5_3.md) - **Step-by-step upgrade guide from older versions**
+- [Best Practices for v2.5.6](docs/BEST_PRACTICES_V2_5_3.md) - **Comprehensive configuration guide and best practices**
+- [Migration Guide to v2.5.6](docs/MIGRATION_TO_V2_5_3.md) - **Step-by-step upgrade guide from older versions**
 - [Release Build Consistency](docs/RELEASE_BUILD_CONSISTENCY.md) - Fix disabled consistency tests and configuration
 - [CI Consistency Improvements](docs/CI_CONSISTENCY_IMPROVEMENTS.md) - Enhanced CI/Release workflow alignment
 
