@@ -1,6 +1,6 @@
 [package]
 name = "rust-actions-toolkit"
-version = "3.0.4"
+version = "4.0.0"
 edition = "2021"
 description = "Universal GitHub Actions toolkit for Rust projects - CI/CD, cross-platform builds, releases, and Python wheels"
 authors = ["Hal <hal.long@outlook.com>"]

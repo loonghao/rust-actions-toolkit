@@ -1,0 +1,175 @@
+name: Enhanced Release
+
+# Reusable workflow for enhanced multi-platform releases
+# Uses native GitHub runners - no cross-compilation complexity
+# Reliable, fast, and avoids all proc-macro issues
+
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        description: 'Rust toolchain version'
+        required: false
+        type: string
+        default: 'stable'
+      binary-name:
+        description: 'Binary name (auto-detected if not specified)'
+        required: false
+        type: string
+        default: ''
+      platforms:
+        description: 'Platforms to build for'
+        required: false
+        type: string
+        default: 'linux,macos,windows'
+      create-release:
+        description: 'Create GitHub release'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  detect-binary:
+    name: Detect Binary Name
+    runs-on: ubuntu-22.04
+    outputs:
+      binary-name: ${{ steps.detect.outputs.binary-name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Detect binary name
+        id: detect
+        run: |
+          if [ -n "${{ inputs.binary-name }}" ]; then
+            echo "binary-name=${{ inputs.binary-name }}" >> $GITHUB_OUTPUT
+            echo "📦 Using specified binary name: ${{ inputs.binary-name }}"
+          else
+            # Auto-detect from Cargo.toml
+            BINARY_NAME=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+            echo "binary-name=$BINARY_NAME" >> $GITHUB_OUTPUT
+            echo "📦 Auto-detected binary name: $BINARY_NAME"
+          fi
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: detect-binary
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux - native build
+          - platform: linux
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            archive-name: linux-x86_64
+          
+          # macOS - native builds
+          - platform: macos
+            os: macos-13
+            target: x86_64-apple-darwin
+            archive-name: macos-x86_64
+          
+          - platform: macos
+            os: macos-14  # Apple Silicon
+            target: aarch64-apple-darwin
+            archive-name: macos-aarch64
+          
+          # Windows - native build
+          - platform: windows
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+            archive-name: windows-x86_64
+    
+    runs-on: ${{ matrix.os }}
+    
+    # Only build requested platforms
+    if: contains(inputs.platforms, matrix.platform)
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          targets: ${{ matrix.target }}
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+
+      - name: Build binary
+        run: |
+          echo "🔨 Building ${{ needs.detect-binary.outputs.binary-name }} for ${{ matrix.target }}"
+          cargo build --release --target ${{ matrix.target }} --bin ${{ needs.detect-binary.outputs.binary-name }}
+
+      - name: Create archive
+        shell: bash
+        run: |
+          BINARY_NAME="${{ needs.detect-binary.outputs.binary-name }}"
+          ARCHIVE_NAME="${{ matrix.archive-name }}"
+          
+          if [[ "${{ matrix.os }}" == windows-* ]]; then
+            BINARY_PATH="target/${{ matrix.target }}/release/${BINARY_NAME}.exe"
+            ARCHIVE_FILE="${ARCHIVE_NAME}.zip"
+            7z a "$ARCHIVE_FILE" "$BINARY_PATH"
+          else
+            BINARY_PATH="target/${{ matrix.target }}/release/${BINARY_NAME}"
+            ARCHIVE_FILE="${ARCHIVE_NAME}.tar.gz"
+            tar -czf "$ARCHIVE_FILE" -C "target/${{ matrix.target }}/release" "$BINARY_NAME"
+          fi
+          
+          echo "📦 Created archive: $ARCHIVE_FILE"
+          echo "archive-file=$ARCHIVE_FILE" >> $GITHUB_OUTPUT
+        id: archive
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive-name }}
+          path: ${{ steps.archive.outputs.archive-file }}
+
+  release:
+    name: Create Release
+    needs: [detect-binary, build]
+    runs-on: ubuntu-22.04
+    if: inputs.create-release
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+
+      - name: Release Summary
+        run: |
+          echo "🎉 Enhanced release completed successfully!"
+          echo "📦 Binary: ${{ needs.detect-binary.outputs.binary-name }}"
+          echo "🏗️ Platforms built:"
+          if [[ "${{ inputs.platforms }}" == *"linux"* ]]; then
+            echo "  - Linux x86_64 (native build)"
+          fi
+          if [[ "${{ inputs.platforms }}" == *"macos"* ]]; then
+            echo "  - macOS x86_64 (native build)"
+            echo "  - macOS aarch64 (native build)"
+          fi
+          if [[ "${{ inputs.platforms }}" == *"windows"* ]]; then
+            echo "  - Windows x86_64 (native build)"
+          fi
+          echo ""
+          echo "✅ No cross-compilation complexity"
+          echo "✅ No proc-macro issues"
+          echo "✅ No Docker permission problems"
+          echo "✅ Fast, reliable, native builds"

@@ -5,6 +5,105 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-06-29
+
+### 🎉 Major Release: Complete Redesign for Simplicity and Reliability
+
+#### 🎯 Design Philosophy Change
+**From**: Complex, feature-complete solution with cross-compilation focus
+**To**: Layered approach prioritizing simplicity, reliability, and native builds
+
+#### 🏗️ New Architecture: Three-Layer Design
+
+##### Layer 1: Core CI (`core-ci.yml`)
+- **Target**: 90% of Rust projects
+- **Philosophy**: Zero configuration, maximum reliability
+- **Features**: fmt, clippy, test, doc, audit, coverage
+- **Platform**: Single platform (Linux) for speed
+- **Benefits**: Fast, reliable, no complexity
+
+##### Layer 2: Enhanced Release (`enhanced-release.yml`)
+- **Target**: Projects needing multi-platform binaries
+- **Philosophy**: Native builds only, no cross-compilation
+- **Platforms**: Linux, macOS (x86_64 + aarch64), Windows
+- **Benefits**: Fast native builds, no proc-macro issues
+
+##### Layer 3: Advanced (Future)
+- **Target**: <5% of projects with special needs
+- **Philosophy**: Full power, full responsibility
+- **Features**: Cross-compilation, exotic platforms
+- **Warning**: Expect complexity and potential issues
+
+#### ✅ Key Improvements
+
+##### Reliability
+- **No proc-macro issues**: Native builds handle all proc-macros correctly
+- **No Docker problems**: No custom Docker images or permission issues
+- **No cross-compilation failures**: Eliminates #1 source of CI failures
+- **Predictable builds**: Same behavior every time
+
+##### Performance
+- **Faster builds**: Native compilation vs cross-compilation
+- **Parallel execution**: Multiple native runners work simultaneously
+- **No Docker overhead**: Direct runner execution
+- **Optimized workflows**: Streamlined for common use cases
+
+##### Simplicity
+- **Zero configuration**: Reasonable defaults for everything
+- **Clear naming**: `core-ci`, `enhanced-release` (no "simple" terminology)
+- **Progressive complexity**: Start simple, add features when needed
+- **Clear documentation**: Quick start guide, migration paths
+
+#### 🔄 Migration from v3
+
+##### Before (v3)
+```yaml
+# Complex configuration with cross-compilation issues
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v3
+uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3
+```
+
+##### After (v4)
+```yaml
+# Clean, simple configuration
+uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4
+uses: loonghao/rust-actions-toolkit/.github/workflows/enhanced-release.yml@v4
+```
+
+#### 📚 New Resources
+- `docs/V4_QUICK_START.md` - Get started in 2 minutes
+- `docs/V4_DESIGN_PHILOSOPHY.md` - Complete design rationale
+- `examples/v4/` - Ready-to-use configurations
+- `examples/migration/turbo-cdn-v4-migration.md` - Detailed migration guide
+
+#### 🎯 Inspired by Success
+Based on turbo-cdn v0.4.1's successful simple configuration approach, proving that reliability and simplicity often trump feature completeness.
+
+#### ⚠️ Breaking Changes
+- Workflow names changed: `reusable-*` → `core-*`, `enhanced-*`
+- Configuration simplified: Many options removed in favor of sensible defaults
+- Platform strategy: Focus on native builds, cross-compilation moved to advanced layer
+
+#### 🔄 Backward Compatibility
+- v3 workflows remain available and supported
+- Clear migration path provided
+- No forced migration - upgrade when ready
+
+### 🚀 Get Started with v4
+
+```yaml
+# Minimal setup - works for most projects
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/core-ci.yml@v4
+```
+
+See `docs/V4_QUICK_START.md` for complete guide.
+
+---
+
 ## [3.0.4] - 2025-06-29
 
 ### 🐛 Docker Permission Fix for Cross-Compilation
