@@ -69,6 +69,8 @@ ENV RUSTFLAGS_BASE="-C target-feature=+crt-static" \
     # Linux musl static linking (already static by default, but ensure it)
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static" \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-feature=+crt-static" \
+    # Proc-macro cross-compilation fix: ensure host toolchain is available
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="" \
     # Ensure OpenSSL is statically linked
     OPENSSL_STATIC=1 \
     OPENSSL_NO_VENDOR=1
