@@ -261,6 +261,10 @@ jobs:
           export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""
           echo "🛡️ Proc-macro protection: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER set"
 
+          # Disable problematic cross configurations that cause Docker permission issues
+          export CROSS_CONFIG=""
+          echo "🚫 Disabled custom Cross.toml to avoid Docker permission issues"
+
           # Use cross for cross-compilation, cargo for native builds
           if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ] && [ "$(uname -m)" = "x86_64" ] && [ "$(uname -s)" = "Linux" ]; then
             echo "🏠 Native build for ${{ matrix.target }}"
@@ -274,7 +278,8 @@ jobs:
             fi
 
             # Use cross for cross-compilation (it handles proc-macros correctly)
-            cross build --release --target ${{ matrix.target }} --bin ${{ steps.detect-binary.outputs.binary-name }}
+            # Disable custom Cross.toml to avoid Docker permission issues
+            CROSS_CONFIG="" cross build --release --target ${{ matrix.target }} --bin ${{ steps.detect-binary.outputs.binary-name }}
           fi
 
           # Check if binary was built successfully

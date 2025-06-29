@@ -1,0 +1,112 @@
+name: Core CI
+
+# Reusable workflow for core Rust CI functionality
+# Inspired by turbo-cdn v0.4.1 success case
+# Zero configuration, reasonable defaults, optimized for speed and reliability
+
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        description: 'Rust toolchain version'
+        required: false
+        type: string
+        default: 'stable'
+      enable-coverage:
+        description: 'Enable code coverage reporting'
+        required: false
+        type: boolean
+        default: true
+      enable-audit:
+        description: 'Enable security audit'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      CODECOV_TOKEN:
+        description: 'Codecov token for coverage reporting'
+        required: false
+
+jobs:
+  ci:
+    name: Core CI
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+          components: rustfmt, clippy
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Check formatting
+        run: |
+          echo "🎨 Checking code formatting..."
+          cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: |
+          echo "📎 Running Clippy..."
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check documentation
+        run: |
+          echo "📚 Checking documentation..."
+          cargo doc --no-deps --document-private-items --all-features
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Run tests
+        run: |
+          echo "🧪 Running tests..."
+          cargo test --all-features
+
+      - name: Security audit
+        if: inputs.enable-audit
+        run: |
+          echo "🔒 Running security audit..."
+          cargo install cargo-audit
+          cargo audit
+
+      - name: Code coverage
+        if: inputs.enable-coverage
+        run: |
+          echo "📊 Generating code coverage..."
+          cargo install cargo-llvm-cov
+          cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        if: inputs.enable-coverage && secrets.CODECOV_TOKEN
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          fail_ci_if_error: false
+
+      - name: CI Summary
+        run: |
+          echo "✅ Core CI completed successfully!"
+          echo "📋 What was checked:"
+          echo "  - Code formatting (cargo fmt)"
+          echo "  - Code quality (cargo clippy)"
+          echo "  - Documentation (cargo doc)"
+          echo "  - Unit tests (cargo test)"
+          if [ "${{ inputs.enable-audit }}" = "true" ]; then
+            echo "  - Security audit (cargo audit)"
+          fi
+          if [ "${{ inputs.enable-coverage }}" = "true" ]; then
+            echo "  - Code coverage (cargo llvm-cov)"
+          fi
+          echo ""
+          echo "🎯 Core CI: Fast, reliable, comprehensive"
+          echo "   ⚡ Optimized for speed and reliability"
+          echo "   🛡️ No cross-compilation complexity"
+          echo "   🚀 Production-ready CI that just works"
