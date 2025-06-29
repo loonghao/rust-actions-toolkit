@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.1] - 2025-06-29
+
+### 🐛 Critical Bug Fix
+
+#### Fixed: Proc-Macro Cross-Compilation Issues
+- **Problem**: `error: cannot produce proc-macro for async-trait v0.1.88 as the target x86_64-unknown-linux-gnu does not support these crate types`
+- **Root Cause**: Missing proc-macro cross-compilation handling in v3.0.0 platform optimization
+- **Solution**: Added proper host/target separation for proc-macro compilation
+
+#### Technical Details
+- **Smart Target Detection**: Only sets `CARGO_BUILD_TARGET` for actual cross-compilation scenarios
+- **Host Platform Preservation**: Ensures proc-macros are built for the host platform (x86_64-linux)
+- **Target Binary Building**: Final binaries are built for the specified target platform
+- **Docker Configuration**: Updated with proc-macro cross-compilation environment
+
+#### Affected Crates (Now Fixed)
+- ✅ **async-trait** - Async trait definitions
+- ✅ **serde** (`serde_derive`) - Serialization/deserialization
+- ✅ **tokio** (`tokio-macros`) - Async runtime macros
+- ✅ **clap** (`clap_derive`) - Command-line argument parsing
+- ✅ **thiserror** (`thiserror-impl`) - Error handling
+- ✅ **syn** & **quote** - Proc-macro development tools
+
+#### Cross-Compilation Targets (All Working)
+- ✅ **Linux ARM64**: `aarch64-unknown-linux-gnu`, `aarch64-unknown-linux-musl`
+- ✅ **Windows**: `x86_64-pc-windows-gnu`, `x86_64-pc-windows-msvc`
+- ✅ **macOS**: `x86_64-apple-darwin`, `aarch64-apple-darwin`
+
+### 📚 Documentation
+- Added comprehensive proc-macro cross-compilation fix guide (`docs/PROC_MACRO_CROSS_COMPILATION_FIX.md`)
+- Detailed troubleshooting and migration instructions
+
+### 🔄 Migration
+**No action required** - this is an automatic fix:
+```yaml
+# Simply update to v3.0.1 or use v3 (auto-updates)
+- uses: loonghao/rust-actions-toolkit@v3
+```
+
 ## [3.0.0] - 2025-06-29
 
 ### 🚀 Major Platform Support Strategy Optimization
