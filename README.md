@@ -344,6 +344,7 @@ git_release_draft = false
 
 ### 📚 Documentation & Best Practices
 - [Best Practices for v2.5.3](docs/BEST_PRACTICES_V2_5_3.md) - **Comprehensive configuration guide and best practices**
+- [Migration Guide to v2.5.3](docs/MIGRATION_TO_V2_5_3.md) - **Step-by-step upgrade guide from older versions**
 - [Release Build Consistency](docs/RELEASE_BUILD_CONSISTENCY.md) - Fix disabled consistency tests and configuration
 - [CI Consistency Improvements](docs/CI_CONSISTENCY_IMPROVEMENTS.md) - Enhanced CI/Release workflow alignment
 
