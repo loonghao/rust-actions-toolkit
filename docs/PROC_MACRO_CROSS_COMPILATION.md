@@ -31,6 +31,40 @@ error: cannot produce proc-macro for `async-trait v0.1.88` as the target `x86_64
 
 ## 🔧 The Solution
 
+### 🚨 Critical Fix (v2.5.5): Global RUSTFLAGS Issue
+
+**Problem**: The most common cause of proc-macro errors is global `RUSTFLAGS` with `crt-static`.
+
+**Root Cause**:
+```bash
+# This causes proc-macro compilation to fail:
+RUSTFLAGS="-C target-feature=+crt-static" cargo build --target x86_64-unknown-linux-gnu
+# error: cannot produce proc-macro for `async-trait v0.1.88` as the target `x86_64-unknown-linux-gnu` does not support these crate types
+```
+
+**Solution**: Use target-specific RUSTFLAGS instead of global ones:
+
+```yaml
+# ❌ Before (causes proc-macro errors):
+- name: Configure Windows static linking
+  run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+  if: endsWith(matrix.target, 'windows-msvc')
+
+# ✅ After (proc-macro compatible):
+- name: Configure Windows static linking
+  run: |
+    target_env=$(echo ${{ matrix.target }} | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+    echo "CARGO_TARGET_${target_env}_RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+  if: endsWith(matrix.target, 'windows-msvc')
+```
+
+**Why This Works**:
+- ✅ **Proc-macros**: Compile for host platform without `crt-static`
+- ✅ **Final binary**: Gets `crt-static` through target-specific flags
+- ✅ **No interference**: Host and target compilation are separate
+
+**Reference**: [Rust Issue #78210](https://github.com/rust-lang/rust/issues/78210)
+
 ### 1. Simplified Cross.toml Configuration
 
 **New file**: `examples/cross-compilation/Cross-simple-proc-macro.toml`

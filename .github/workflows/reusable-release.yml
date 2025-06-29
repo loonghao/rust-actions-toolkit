@@ -134,7 +134,12 @@ jobs:
 
       - name: Configure Windows static linking
         shell: bash
-        run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+        run: |
+          echo "🔧 Configuring Windows static linking for ${{ matrix.target }}"
+          echo "⚠️ Note: crt-static can cause proc-macro issues, using alternative approach"
+          # Instead of global RUSTFLAGS, we'll use target-specific configuration
+          # This avoids proc-macro compilation issues
+          echo "CARGO_TARGET_$(echo ${{ matrix.target }} | tr '[:lower:]' '[:upper:]' | tr '-' '_')_RUSTFLAGS=-C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
 
       - name: Configure cross-compilation environment
@@ -230,16 +235,118 @@ jobs:
 
           echo "🔍 Final upload decision: should-upload=$should_upload"
 
-      - name: Upload binary assets
+      - name: Build binary for target
         if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != ''
-        id: upload-binary
+        id: build-binary
         continue-on-error: true
-        uses: taiki-e/upload-rust-binary-action@v1
+        shell: bash
+        run: |
+          echo "🔨 Building binary for target: ${{ matrix.target }}"
+          echo "📦 Binary name: ${{ steps.detect-binary.outputs.binary-name }}"
+
+          # Clear any global settings that might interfere with proc-macros
+          unset CARGO_BUILD_TARGET
+          unset CARGO_TARGET_DIR
+
+          # Clear global RUSTFLAGS to avoid proc-macro issues
+          # Target-specific flags are handled by cargo/cross automatically
+          echo "🧹 Clearing global RUSTFLAGS to avoid proc-macro compilation issues"
+          unset RUSTFLAGS
+
+          # Use cross for cross-compilation, cargo for native builds
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ] && [ "$(uname -m)" = "x86_64" ] && [ "$(uname -s)" = "Linux" ]; then
+            echo "🏠 Native build for ${{ matrix.target }}"
+            cargo build --release --bin ${{ steps.detect-binary.outputs.binary-name }}
+          else
+            echo "🌍 Cross-compilation build for ${{ matrix.target }}"
+            # Install cross if not available
+            if ! command -v cross &> /dev/null; then
+              echo "📥 Installing cross..."
+              cargo install cross --git https://github.com/cross-rs/cross
+            fi
+
+            # Use cross for cross-compilation (it handles proc-macros correctly)
+            cross build --release --target ${{ matrix.target }} --bin ${{ steps.detect-binary.outputs.binary-name }}
+          fi
+
+          # Check if binary was built successfully
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ] && [ "$(uname -m)" = "x86_64" ] && [ "$(uname -s)" = "Linux" ]; then
+            binary_path="target/release/${{ steps.detect-binary.outputs.binary-name }}"
+          else
+            binary_path="target/${{ matrix.target }}/release/${{ steps.detect-binary.outputs.binary-name }}"
+          fi
+
+          # Add .exe extension for Windows targets
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            binary_path="${binary_path}.exe"
+          fi
+
+          if [ -f "$binary_path" ]; then
+            echo "✅ Binary built successfully: $binary_path"
+            echo "binary-path=$binary_path" >> $GITHUB_OUTPUT
+            echo "build-success=true" >> $GITHUB_OUTPUT
+
+            # Show binary info
+            ls -la "$binary_path"
+            file "$binary_path" 2>/dev/null || echo "file command not available"
+          else
+            echo "❌ Binary not found at expected path: $binary_path"
+            echo "build-success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release archives
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.build-binary.outputs.build-success == 'true'
+        id: create-archives
+        continue-on-error: true
+        shell: bash
+        run: |
+          binary_path="${{ steps.build-binary.outputs.binary-path }}"
+          binary_name="${{ steps.detect-binary.outputs.binary-name }}"
+          target="${{ matrix.target }}"
+
+          echo "📦 Creating release archives for $binary_name ($target)"
+
+          # Create archives directory
+          mkdir -p archives
+
+          # Determine archive names
+          if [[ "$target" == *"windows"* ]]; then
+            archive_name="${binary_name}-${target}.zip"
+            echo "🗜️ Creating ZIP archive for Windows: $archive_name"
+
+            # Create ZIP for Windows
+            if command -v zip &> /dev/null; then
+              zip "archives/$archive_name" "$binary_path"
+            else
+              # Fallback: use 7z if available
+              if command -v 7z &> /dev/null; then
+                7z a "archives/$archive_name" "$binary_path"
+              else
+                echo "⚠️ No ZIP utility available, copying binary directly"
+                cp "$binary_path" "archives/${binary_name}-${target}.exe"
+              fi
+            fi
+          else
+            archive_name="${binary_name}-${target}.tar.gz"
+            echo "🗜️ Creating TAR.GZ archive for Unix: $archive_name"
+
+            # Create TAR.GZ for Unix systems
+            tar -czf "archives/$archive_name" -C "$(dirname "$binary_path")" "$(basename "$binary_path")"
+          fi
+
+          # List created archives
+          echo "📋 Created archives:"
+          ls -la archives/
+
+          echo "archive-created=true" >> $GITHUB_OUTPUT
+
+      - name: Upload release assets
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.create-archives.outputs.archive-created == 'true'
+        id: upload-assets
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
         with:
-          bin: ${{ steps.detect-binary.outputs.binary-name }}
-          target: ${{ matrix.target }}
-          tar: all
-          zip: windows
+          files: archives/*
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Handle binary name missing
@@ -257,18 +364,31 @@ jobs:
           echo "  - Ensure Cargo.toml has a clear package name"
           echo "  - Check [[bin]] sections have explicit names"
 
-      - name: Handle upload failure
-        if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != '' && steps.upload-binary.outcome == 'failure'
+      - name: Handle build failure
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != '' && steps.build-binary.outputs.build-success != 'true'
         shell: bash
         run: |
-          echo "⚠️ Binary upload failed for ${{ matrix.target }}"
+          echo "⚠️ Binary build failed for ${{ matrix.target }}"
           echo "This could be due to:"
-          echo "  - Build failure for this target"
-          echo "  - Missing dependencies for cross-compilation"
-          echo "  - Binary name mismatch"
-          echo "  - Network issues"
+          echo "  - Cross-compilation toolchain issues"
+          echo "  - Missing dependencies for target platform"
+          echo "  - Proc-macro compilation problems"
+          echo "  - Target-specific build errors"
           echo ""
           echo "The workflow will continue, but this target won't have binary assets"
+
+      - name: Handle upload failure
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.build-binary.outputs.build-success == 'true' && steps.upload-assets.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "⚠️ Asset upload failed for ${{ matrix.target }}"
+          echo "This could be due to:"
+          echo "  - GitHub API issues"
+          echo "  - Network connectivity problems"
+          echo "  - Permission issues with GITHUB_TOKEN"
+          echo "  - Release not found or not accessible"
+          echo ""
+          echo "The binary was built successfully but upload failed"
 
       - name: Skip binary upload (library crate)
         if: steps.detect-binary.outputs.should-upload != 'true'

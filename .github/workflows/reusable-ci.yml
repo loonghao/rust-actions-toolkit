@@ -291,9 +291,13 @@ jobs:
             fi
           fi
 
-          # Windows MSVC configuration
+          # Windows MSVC configuration (avoid global RUSTFLAGS for proc-macro compatibility)
           if [[ "${{ matrix.target }}" == *"windows-msvc"* ]]; then
-            echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+            echo "🔧 Configuring Windows static linking for ${{ matrix.target }}"
+            echo "⚠️ Using target-specific RUSTFLAGS to avoid proc-macro issues"
+            # Use target-specific environment variable instead of global RUSTFLAGS
+            target_env=$(echo ${{ matrix.target }} | tr '[:lower:]' '[:upper:]' | tr '-' '_')
+            echo "CARGO_TARGET_${target_env}_RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
           fi
 
           # Configure proc-macro cross-compilation (minimal approach)
@@ -318,9 +322,9 @@ jobs:
           # Ensure Cross.toml exists and is properly configured
           if [ ! -f "Cross.toml" ]; then
             echo "Creating default Cross.toml for cross-compilation..."
-            echo "🔧 Using simplified proc-macro configuration to avoid compilation conflicts"
-            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-simple-proc-macro.toml
-            echo "✅ Downloaded simplified Cross.toml with proc-macro compatibility"
+            echo "🔧 Using ultimate proc-macro configuration to completely avoid compilation conflicts"
+            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-proc-macro-ultimate.toml
+            echo "✅ Downloaded ultimate Cross.toml with complete proc-macro compatibility"
           else
             echo "Cross.toml already exists, skipping creation"
             echo "⚠️ Note: Ensure your Cross.toml properly handles proc-macro cross-compilation"
