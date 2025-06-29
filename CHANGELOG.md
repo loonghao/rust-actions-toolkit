@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.4] - 2025-06-29
+
+### 🐛 Docker Permission Fix for Cross-Compilation
+
+#### Problem Identified
+- **Docker permission errors** in Cross.toml configurations using custom images
+- **apt-get permission denied** errors when building custom Docker images
+- **turbo-cdn project** experiencing Docker build failures with musl targets
+
+#### Technical Fixes
+- **Fixed Cross.toml configurations**: Added proper apt permission handling
+- **Enhanced Docker setup**: Added `dpkg --add-architecture` and `apt-get clean`
+- **Simple Cross.toml option**: Created configuration using standard cross images
+- **Permission-safe commands**: Proper sequence for Docker package installation
+
+#### New Resources
+- `examples/cross-compilation/Cross-simple-fix.toml` - Uses standard cross images (recommended)
+- Enhanced `Cross-proc-macro-ultimate-fix.toml` with Docker permission fixes
+- Updated `turbo-cdn-Cross.toml` with proper Docker setup
+
+### 🎯 Specific Fixes
+- **Docker permission errors**: Fixed apt-get permission denied issues
+- **Custom image builds**: Proper architecture setup and package installation
+- **Standard image option**: Alternative using official cross images
+
+### 🔄 Migration
+**Recommended approach** - use simple configuration:
+```bash
+# Copy the simple, permission-safe configuration
+curl -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/v3.0.4/examples/cross-compilation/Cross-simple-fix.toml
+```
+
 ## [3.0.3] - 2025-06-29
 
 ### 🐛 Critical Reusable Workflow Proc-Macro Fix

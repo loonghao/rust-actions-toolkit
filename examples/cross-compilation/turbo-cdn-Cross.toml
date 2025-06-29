@@ -25,8 +25,12 @@ image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
-    # Install ARM64 toolchain
-    "apt-get update && apt-get install -y gcc-aarch64-linux-gnu",
+    # Fix apt permissions and install ARM64 toolchain
+    "dpkg --add-architecture arm64",
+    "apt-get clean",
+    "rm -rf /var/lib/apt/lists/*",
+    "apt-get update",
+    "apt-get install -y gcc-aarch64-linux-gnu",
 ]
 
 [target.aarch64-unknown-linux-gnu.env]
@@ -43,8 +47,12 @@ image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
-    # Install musl toolchain
-    "apt-get update && apt-get install -y musl-tools",
+    # Fix apt permissions and install musl toolchain
+    "dpkg --add-architecture amd64",
+    "apt-get clean",
+    "rm -rf /var/lib/apt/lists/*",
+    "apt-get update",
+    "apt-get install -y musl-tools musl-dev",
 ]
 
 [target.x86_64-unknown-linux-musl.env]
@@ -58,8 +66,12 @@ image = "ghcr.io/loonghao/rust-toolkit:cross-compile"
 pre-build = [
     # Ensure host toolchain is available for proc-macros
     "rustup target add x86_64-unknown-linux-gnu",
-    # Install ARM64 musl toolchain
-    "apt-get update && apt-get install -y musl-tools gcc-aarch64-linux-gnu",
+    # Fix apt permissions and install ARM64 musl toolchain
+    "dpkg --add-architecture arm64",
+    "apt-get clean",
+    "rm -rf /var/lib/apt/lists/*",
+    "apt-get update",
+    "apt-get install -y musl-tools musl-dev gcc-aarch64-linux-gnu",
 ]
 
 [target.aarch64-unknown-linux-musl.env]
