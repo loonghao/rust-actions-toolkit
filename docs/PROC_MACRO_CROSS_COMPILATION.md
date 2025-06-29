@@ -25,37 +25,36 @@ error: proc-macro `my_macro` cannot be loaded
    = note: cannot load proc-macro compiled for different target architecture
 ```
 
+```
+error: cannot produce proc-macro for `async-trait v0.1.88` as the target `x86_64-unknown-linux-gnu` does not support these crate types
+```
+
 ## 🔧 The Solution
 
-### 1. Enhanced Cross.toml Configuration
+### 1. Simplified Cross.toml Configuration
 
-**New file**: `examples/cross-compilation/Cross-proc-macro-fixed.toml`
+**New file**: `examples/cross-compilation/Cross-simple-proc-macro.toml`
 
 Key improvements:
 ```toml
-[build]
-# Ensure proc-macros are built for the host platform
-default-target = "x86_64-unknown-linux-gnu"
-
+# DO NOT set global build targets that interfere with proc-macro compilation
 [build.env]
 passthrough = [
-    # Proc-macro host configuration
+    # Minimal configuration to avoid proc-macro conflicts
     "CARGO_TARGET_DIR",
-    "CARGO_BUILD_TARGET",
-    # ... other environment variables
+    # ... other essential environment variables
 ]
 
-# For each target, ensure host toolchain is available
+# Simple target configurations without proc-macro interference
 [target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
 pre-build = [
-    # ... target-specific setup
-    # Ensure host toolchain for proc-macros
-    "rustup target add x86_64-unknown-linux-gnu"
+    # ... target-specific setup only
+    "apt-get update && apt-get install -y libssl-dev:arm64 pkg-config"
 ]
 
-[target.aarch64-unknown-linux-gnu.env]
-# Ensure proc-macros use host target
-CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
+# No special proc-macro environment variables needed
+# Let Cargo handle proc-macro compilation automatically
 ```
 
 ### 2. Workflow Configuration Updates
@@ -69,19 +68,19 @@ CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER = ""
     targets: x86_64-unknown-linux-gnu
 ```
 
-**Proc-Macro Environment Configuration**:
+**Simplified Environment Configuration**:
 ```yaml
-- name: Configure proc-macro cross-compilation
+- name: Configure cross-compilation environment
   run: |
     HOST_TARGET="x86_64-unknown-linux-gnu"
-    
+
     if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
       echo "🔄 Cross-compiling from $HOST_TARGET to ${{ matrix.target }}"
-      echo "📦 Proc-macros will be built for host platform: $HOST_TARGET"
-      
-      # Configure Cargo for proper proc-macro handling
-      echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
-      echo "CARGO_TARGET_${HOST_TARGET//-/_}_RUNNER=" >> $GITHUB_ENV
+      echo "📦 Proc-macros will automatically use host platform"
+
+      # Minimal configuration - let Cargo handle proc-macros automatically
+      echo "CARGO_TARGET_DIR=target" >> $GITHUB_ENV
+      # DO NOT set CARGO_BUILD_TARGET as it interferes with proc-macros
     fi
 ```
 

@@ -296,16 +296,20 @@ jobs:
             echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
           fi
 
-          # Configure proc-macro cross-compilation
+          # Configure proc-macro cross-compilation (minimal approach)
           HOST_TARGET="x86_64-unknown-linux-gnu"
           if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
-            echo "🔄 Configuring proc-macro cross-compilation"
-            echo "📦 Proc-macros will be built for host: $HOST_TARGET"
-            echo "🎯 Target platform: ${{ matrix.target }}"
+            echo "🔄 Configuring cross-compilation for target: ${{ matrix.target }}"
+            echo "📦 Proc-macros will automatically use host platform: $HOST_TARGET"
+            echo "🎯 Final binary will be built for: ${{ matrix.target }}"
 
-            # Set environment for proper proc-macro handling
-            echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
-            echo "CARGO_TARGET_${HOST_TARGET//-/_}_RUNNER=" >> $GITHUB_ENV
+            # Minimal configuration - let Cargo handle proc-macro compilation automatically
+            # Only set essential environment variables
+            echo "CARGO_TARGET_DIR=target" >> $GITHUB_ENV
+
+            echo "✅ Cross-compilation environment ready"
+          else
+            echo "✅ Native compilation for $HOST_TARGET"
           fi
 
       - name: Configure Cross.toml
@@ -314,9 +318,9 @@ jobs:
           # Ensure Cross.toml exists and is properly configured
           if [ ! -f "Cross.toml" ]; then
             echo "Creating default Cross.toml for cross-compilation..."
-            echo "🔧 Using proc-macro-fixed configuration to resolve cross-compilation issues"
-            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-proc-macro-fixed.toml
-            echo "✅ Downloaded enhanced Cross.toml with proc-macro and mimalloc support"
+            echo "🔧 Using simplified proc-macro configuration to avoid compilation conflicts"
+            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-simple-proc-macro.toml
+            echo "✅ Downloaded simplified Cross.toml with proc-macro compatibility"
           else
             echo "Cross.toml already exists, skipping creation"
             echo "⚠️ Note: Ensure your Cross.toml properly handles proc-macro cross-compilation"

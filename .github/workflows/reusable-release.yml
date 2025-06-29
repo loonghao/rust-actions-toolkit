@@ -134,31 +134,30 @@ jobs:
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
 
-      - name: Configure proc-macro cross-compilation
+      - name: Configure cross-compilation environment
         shell: bash
         run: |
-          # Ensure proc-macros are built for the host platform during cross-compilation
-          echo "🔧 Configuring proc-macro cross-compilation for target: ${{ matrix.target }}"
+          # Configure cross-compilation environment for proc-macro compatibility
+          echo "🔧 Configuring cross-compilation for target: ${{ matrix.target }}"
 
-          # Set host target for proc-macros (always x86_64-unknown-linux-gnu in GitHub Actions)
           HOST_TARGET="x86_64-unknown-linux-gnu"
 
-          # Configure Cargo to use host toolchain for proc-macros
+          # Set basic Cargo configuration
           echo "CARGO_TARGET_DIR=target" >> $GITHUB_ENV
 
-          # For cross-compilation, ensure proc-macros use host target
           if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
             echo "🔄 Cross-compiling from $HOST_TARGET to ${{ matrix.target }}"
-            echo "📦 Proc-macros will be built for host platform: $HOST_TARGET"
+            echo "📦 Proc-macros will automatically use host platform"
+            echo "🎯 Final binary will be built for target platform"
 
-            # Set environment variables for proper proc-macro handling
-            echo "CARGO_BUILD_TARGET=${{ matrix.target }}" >> $GITHUB_ENV
-            echo "CARGO_TARGET_${HOST_TARGET//-/_}_RUNNER=" >> $GITHUB_ENV
+            # Let taiki-e/upload-rust-binary-action handle the target specification
+            # This avoids conflicts with proc-macro compilation
 
-            # Ensure host target is available
-            rustup target add "$HOST_TARGET" || echo "Host target already installed"
+            echo "✅ Cross-compilation environment ready"
+            echo "   - Host: $HOST_TARGET (automatic for proc-macros)"
+            echo "   - Target: ${{ matrix.target }} (specified to upload action)"
           else
-            echo "✅ Native compilation, no proc-macro configuration needed"
+            echo "✅ Native compilation for $HOST_TARGET"
           fi
 
       - name: Detect binary name and check project type
