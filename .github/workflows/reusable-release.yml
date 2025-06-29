@@ -64,6 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check CI coverage
+        shell: bash
         run: |
           echo "🔍 Verifying that CI tested the same targets as Release..."
           echo "Release targets: ${{ inputs.target-platforms }}"
@@ -87,6 +88,7 @@ jobs:
 
       - name: Install packages (Ubuntu)
         if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -123,6 +125,7 @@ jobs:
 
       - name: Configure OpenSSL for musl targets
         if: contains(matrix.target, '-musl')
+        shell: bash
         run: |
           echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
           echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
@@ -215,11 +218,20 @@ jobs:
           # Output results
           echo "should-upload=$should_upload" >> $GITHUB_OUTPUT
           if [ "$should_upload" = "true" ]; then
-            echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+            if [ -n "$binary_name" ] && [ "$binary_name" != "" ]; then
+              echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+              echo "📦 Binary name set for upload: $binary_name"
+            else
+              echo "❌ Binary project detected but no binary name found"
+              echo "should-upload=false" >> $GITHUB_OUTPUT
+              should_upload="false"
+            fi
           fi
 
+          echo "🔍 Final upload decision: should-upload=$should_upload"
+
       - name: Upload binary assets
-        if: steps.detect-binary.outputs.should-upload == 'true'
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != ''
         id: upload-binary
         continue-on-error: true
         uses: taiki-e/upload-rust-binary-action@v1
@@ -230,8 +242,23 @@ jobs:
           zip: windows
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Handle binary name missing
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name == ''
+        shell: bash
+        run: |
+          echo "⚠️ Binary project detected but binary name could not be determined for ${{ matrix.target }}"
+          echo "This could be due to:"
+          echo "  - Complex Cargo.toml structure"
+          echo "  - Multiple binary targets without explicit names"
+          echo "  - Missing package name in Cargo.toml"
+          echo ""
+          echo "Solutions:"
+          echo "  - Add 'binary-name' input to your workflow configuration"
+          echo "  - Ensure Cargo.toml has a clear package name"
+          echo "  - Check [[bin]] sections have explicit names"
+
       - name: Handle upload failure
-        if: steps.detect-binary.outputs.should-upload == 'true' && steps.upload-binary.outcome == 'failure'
+        if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != '' && steps.upload-binary.outcome == 'failure'
         shell: bash
         run: |
           echo "⚠️ Binary upload failed for ${{ matrix.target }}"
@@ -275,6 +302,7 @@ jobs:
 
       - name: Check for pyproject.toml
         id: check-pyproject
+        shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -300,6 +328,7 @@ jobs:
 
       - name: Setup cross-compilation (Linux)
         if: steps.check-pyproject.outputs.exists == 'true' && matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
@@ -307,12 +336,14 @@ jobs:
 
       - name: Install maturin
         if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
         run: pip install maturin[patchelf]
 
       - name: Build Python wheels
         if: steps.check-pyproject.outputs.exists == 'true'
         id: build-wheels
         continue-on-error: true
+        shell: bash
         run: maturin build --release --target ${{ matrix.target }}
 
       - name: Upload wheels to release

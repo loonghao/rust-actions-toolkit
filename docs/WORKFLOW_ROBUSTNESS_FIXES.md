@@ -208,7 +208,50 @@ The fixes are automatically tested in our CI pipeline:
 - [taiki-e/upload-rust-binary-action](https://github.com/taiki-e/upload-rust-binary-action)
 - [Cross-platform Workflow Best Practices](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#choosing-github-hosted-runners)
 
-### 3. Enhanced Graceful Failure Handling
+### 3. Enhanced Binary Name Detection and Validation
+
+**Problem**: `INPUT_BIN: parameter null or not set` errors when binary name detection failed.
+
+**Root Cause**:
+- Binary name detection logic had gaps
+- No validation of detected binary names
+- Upload action called even when binary name was empty
+
+**Solution**: Enhanced binary name detection with comprehensive validation:
+
+```yaml
+# Enhanced binary name detection
+- name: Detect and validate binary
+  run: |
+    # Multiple detection methods with validation
+    if [ -n "${{ inputs.binary-name }}" ] && [ "${{ inputs.binary-name }}" != "" ]; then
+      binary_name="${{ inputs.binary-name }}"
+    else
+      # Auto-detect with validation
+      binary_name=$(grep '^name = ' Cargo.toml | head -1 | sed 's/name = "\(.*\)"/\1/')
+      if [ -z "$binary_name" ]; then
+        echo "should-upload=false" >> $GITHUB_OUTPUT
+        exit 0
+      fi
+    fi
+
+    # Validate binary name before upload
+    if [ -n "$binary_name" ] && [ "$binary_name" != "" ]; then
+      echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+      echo "should-upload=true" >> $GITHUB_OUTPUT
+    else
+      echo "should-upload=false" >> $GITHUB_OUTPUT
+    fi
+
+# Conditional upload with validation
+- name: Upload binary assets
+  if: steps.detect-binary.outputs.should-upload == 'true' && steps.detect-binary.outputs.binary-name != ''
+  uses: taiki-e/upload-rust-binary-action@v1
+  with:
+    bin: ${{ steps.detect-binary.outputs.binary-name }}
+```
+
+### 4. Enhanced Graceful Failure Handling
 
 **Problem**: Workflows would fail completely if binary upload or wheel building failed.
 
