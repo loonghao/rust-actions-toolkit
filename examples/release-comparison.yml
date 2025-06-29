@@ -20,15 +20,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Aligned with Docker base image targets
-          - { target: x86_64-pc-windows-gnu, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          # 2025 optimized core platforms
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
           - { target: x86_64-apple-darwin, os: macos-13 }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
     steps:
       - uses: actions/checkout@v4
       
       # That's it! Everything else is automatic ✨
-      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ matrix.target }}
@@ -44,21 +44,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: x86_64-pc-windows-gnu, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-22.04 }
     steps:
       - uses: actions/checkout@v4
       
       # Step 1: Build with main action
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@v3
         with:
           command: release
           target: ${{ matrix.target }}
           enable-python-wheels: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       # Step 2: Upload with specialized action
-      - uses: loonghao/rust-actions-toolkit/actions/upload-release-artifacts@v2
+      - uses: loonghao/rust-actions-toolkit/actions/upload-release-artifacts@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           binary-path: target/${{ matrix.target }}/release/
@@ -76,12 +76,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: x86_64-pc-windows-gnu, os: ubuntu-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
     steps:
       - uses: actions/checkout@v4
       
       # Full control over every aspect
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@v3
         with:
           command: release
           target: ${{ matrix.target }}
@@ -111,8 +111,8 @@ jobs:
 # - Use Upload Artifacts when you need custom build logic
 # - Use Main Action when you need maximum control
 #
-# Platform Support (all methods):
-# - Windows: x86_64-pc-windows-gnu, i686-pc-windows-gnu
-# - Linux: x86_64-unknown-linux-musl, aarch64-unknown-linux-musl
-# - Linux: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu  
-# - macOS: x86_64-apple-darwin, aarch64-apple-darwin
+# Platform Support (v3 - 2025 Optimized):
+# Tier 1 (Core): x86_64-unknown-linux-gnu, x86_64-apple-darwin, aarch64-apple-darwin, x86_64-pc-windows-msvc
+# Tier 2 (Important): aarch64-unknown-linux-gnu, x86_64-unknown-linux-musl, aarch64-unknown-linux-musl
+# Tier 3 (Optional): x86_64-pc-windows-gnu (zero-dependency builds)
+# Removed: i686-pc-windows-gnu (32-bit Windows deprecated)

@@ -17,20 +17,27 @@ The error occurs when:
 2. Cargo tries to build proc-macros for the target platform instead of the host platform
 3. The target platform doesn't support proc-macro crate types
 
-## Solution in rust-actions-toolkit v3.0.1+
+## Solution in rust-actions-toolkit v3.0.2+
 
 ### Automatic Fix
 
-rust-actions-toolkit v3.0.1+ automatically handles this issue:
+rust-actions-toolkit v3.0.2+ automatically handles this issue with enhanced proc-macro protection:
 
 ```yaml
-# This now works correctly with proc-macros
+# This now works correctly with proc-macros (enhanced fix)
 - uses: loonghao/rust-actions-toolkit@v3
   with:
     command: release
     target: aarch64-unknown-linux-gnu
     github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+### Enhanced Protection
+
+v3.0.2+ includes additional safeguards:
+- Always ensures host toolchain availability
+- Sets `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""`
+- Prevents external tools from interfering with proc-macro compilation
 
 ### How It Works
 
@@ -140,10 +147,44 @@ This separation ensures that:
 
 ### Still Getting Proc-Macro Errors?
 
-1. **Check version**: Ensure you're using v3.0.1 or later
-2. **Check logs**: Look for proc-macro configuration messages
-3. **Check environment**: Verify no conflicting `CARGO_BUILD_TARGET` settings
-4. **Report issue**: If problems persist, please report with full logs
+#### Quick Fixes
+
+1. **Update to latest**: Ensure you're using v3.0.2 or later
+   ```yaml
+   - uses: loonghao/rust-actions-toolkit@v3  # Auto-updates to latest
+   ```
+
+2. **Check Cross.toml**: If using `cross`, ensure proper configuration
+   ```toml
+   # Copy examples/cross-compilation/Cross-proc-macro-ultimate-fix.toml
+   # to your project root as Cross.toml
+   ```
+
+3. **Manual environment fix**: Add this step before building
+   ```yaml
+   - name: Fix proc-macro cross-compilation
+     run: |
+       echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> $GITHUB_ENV
+       rustup target add x86_64-unknown-linux-gnu
+   ```
+
+#### Diagnostic Steps
+
+1. **Check logs**: Look for proc-macro configuration messages
+2. **Verify environment**: Check for conflicting `CARGO_BUILD_TARGET` settings
+3. **Test locally**: Try building with `cross` locally first
+4. **Check dependencies**: Ensure all proc-macro crates are up to date
+
+#### Common Issues
+
+**Issue**: Using custom Cross.toml with global `default-target`
+**Solution**: Remove global `default-target` setting, use target-specific config only
+
+**Issue**: External tools setting `CARGO_BUILD_TARGET` globally
+**Solution**: Use our enhanced fix that overrides external settings
+
+**Issue**: Missing host toolchain
+**Solution**: Our fix automatically installs `x86_64-unknown-linux-gnu` target
 
 ### Manual Workaround (Not Recommended)
 

@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run release-plz
-        uses: loonghao/rust-actions-toolkit@v2
+        uses: loonghao/rust-actions-toolkit@v3
         with:
           command: release-plz
           # Optional: Customize Rust toolchain
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@v3
         with:
           command: release-plz
           release-plz-command: release-pr
@@ -61,7 +61,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@v3
         with:
           command: release-plz
           release-plz-command: release

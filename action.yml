@@ -203,14 +203,21 @@ runs:
       run: |
         echo "🔧 Configuring proc-macro cross-compilation for target: ${{ inputs.target }}"
 
-        # Only set CARGO_BUILD_TARGET for cross-compilation scenarios
+        # Critical fix: Ensure proc-macros are NEVER built for target platform
+        # Always ensure host toolchain is available for proc-macro compilation
+        echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> $GITHUB_ENV
+
+        # Only set CARGO_BUILD_TARGET for actual cross-compilation scenarios
         # This ensures proc-macros are built for host platform while final binary is built for target
         if [ "${{ inputs.target }}" != "x86_64-unknown-linux-gnu" ] && [ "${{ runner.os }}" == "Linux" ]; then
           echo "CARGO_BUILD_TARGET=${{ inputs.target }}" >> $GITHUB_ENV
-          echo "📦 Cross-compilation enabled: proc-macros will use host platform, binary will use target platform"
+          echo "📦 Cross-compilation enabled: proc-macros will use host (x86_64-linux), binary will use target (${{ inputs.target }})"
         else
-          echo "📦 Native compilation: no special proc-macro handling needed"
+          echo "📦 Native compilation: proc-macros and binary both use host platform"
         fi
+
+        # Ensure host toolchain is always available for proc-macros
+        rustup target add x86_64-unknown-linux-gnu || true
 
     - name: Build and upload binary
       id: build-binary

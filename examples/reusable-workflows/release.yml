@@ -11,7 +11,7 @@ on:
 jobs:
   # Option 1: Use reusable workflow (traditional approach)
   release-reusable:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
@@ -20,17 +20,17 @@ jobs:
       # Optional: Enable/disable Python wheels (default: true)
       # Only builds wheels if pyproject.toml exists
       enable-python-wheels: true
-      # Updated target platforms (aligned with Docker base image)
+      # 2025 optimized platform strategy
       target-platforms: |
         [
-          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
-          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
-          {"target": "x86_64-apple-darwin", "os": "macos-13"},
-          {"target": "aarch64-apple-darwin", "os": "macos-13"}
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "high"},
+          {"target": "x86_64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "aarch64-apple-darwin", "os": "macos-13", "priority": "high"},
+          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022", "priority": "high"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04", "priority": "low"}
         ]
     # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
     # No secrets need to be passed for this workflow
@@ -43,15 +43,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Aligned with Docker base image targets
-          - { target: x86_64-pc-windows-gnu, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          # 2025 core platforms for smart-release demo
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
           - { target: x86_64-apple-darwin, os: macos-13 }
           - { target: aarch64-apple-darwin, os: macos-13 }
+          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v2
+      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: ${{ matrix.target }}

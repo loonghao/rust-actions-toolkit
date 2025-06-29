@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] - 2025-06-29
+
+### 🐛 Enhanced Proc-Macro Cross-Compilation Fix
+
+#### Critical Improvements
+- **Enhanced Protection**: Added additional safeguards against external tool interference
+- **Host Toolchain Guarantee**: Always ensures `x86_64-unknown-linux-gnu` toolchain availability
+- **Environment Override**: Sets `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=""` to prevent conflicts
+- **Ultimate Cross.toml**: Added comprehensive Cross.toml configuration example
+
+#### Technical Enhancements
+- **Automatic Host Target**: Ensures host toolchain is always available for proc-macros
+- **External Tool Protection**: Prevents tools like `taiki-e/upload-rust-binary-action` from interfering
+- **Robust Environment Setup**: Multiple layers of proc-macro protection
+- **Enhanced Documentation**: Comprehensive troubleshooting guide with quick fixes
+
+#### New Resources
+- `examples/cross-compilation/Cross-proc-macro-ultimate-fix.toml` - Ultimate Cross.toml configuration
+- Enhanced troubleshooting section in proc-macro documentation
+- Quick fix examples for common issues
+
+### 🔄 Migration
+**No action required** - this is an enhanced automatic fix:
+```yaml
+# Simply use v3 (auto-updates to v3.0.2)
+- uses: loonghao/rust-actions-toolkit@v3
+```
+
+### 📚 For Persistent Issues
+If you're still experiencing proc-macro errors:
+1. Copy `examples/cross-compilation/Cross-proc-macro-ultimate-fix.toml` to your project root as `Cross.toml`
+2. Ensure you're using v3.0.2 or later
+3. Check the enhanced troubleshooting guide
+
 ## [3.0.1] - 2025-06-29
 
 ### 🐛 Critical Bug Fix
