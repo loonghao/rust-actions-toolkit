@@ -19,9 +19,70 @@
 - **🐍 Python**: Python wheel 构建和分�?
 - **📦 发布**: 使用 release-plz 自动发布�?crates.io
 
-## 🚀 快速开�?
+## 🚀 快速开始
 
-### 简单的 CI 设置
+### 🌟 推荐：可重用工作流 (v2.5.3+)
+
+**适用于：具有 CI/Release 一致性的现代项目**
+
+创建 `.github/workflows/ci.yml`：
+```yaml
+name: CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      rust-toolchain: stable
+      # 🎯 关键：指定发布目标以进行一致性测试
+      release-target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"}
+        ]
+```
+
+创建 `.github/workflows/release.yml`：
+```yaml
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.3
+    with:
+      # 🎯 关键：使用与 CI 相同的目标以保持一致性
+      target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"}
+        ]
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**✨ 您将获得：**
+- ✅ **自动发布构建一致性测试** - CI 测试与发布完全相同的目标
+- ✅ **早期交叉编译问题检测** - 在发布前发现问题
+- ✅ **Proc-Macro 交叉编译支持** - 支持 serde、tokio、async-trait 等
+- ✅ **零配置默认值** - 开箱即用的智能默认设置
+- ✅ **全面的平台支持** - Linux、Windows、macOS、musl、ARM64
+
+### 🔧 替代方案：单一 Action（传统方式）
+
+**适用于：简单项目或渐进式迁移**
 
 ```yaml
 name: CI
@@ -36,7 +97,7 @@ jobs:
           command: ci
 ```
 
-### 跨平台发�?
+### 跨平台发布
 
 ```yaml
 name: Release

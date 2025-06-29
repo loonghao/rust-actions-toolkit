@@ -21,7 +21,68 @@
 
 ## 🚀 Quick Start
 
-### Simple CI Setup
+### 🌟 Recommended: Reusable Workflows (v2.5.3+)
+
+**Best for: Modern projects with CI/Release consistency**
+
+Create `.github/workflows/ci.yml`:
+```yaml
+name: CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      rust-toolchain: stable
+      # 🎯 KEY: Specify release targets for consistency testing
+      release-target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"}
+        ]
+```
+
+Create `.github/workflows/release.yml`:
+```yaml
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v2.5.3
+    with:
+      # 🎯 KEY: Use SAME targets as CI for consistency
+      target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"}
+        ]
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+**✨ What You Get:**
+- ✅ **Automatic Release Build Consistency Testing** - CI tests exact same targets as release
+- ✅ **Early Cross-Compilation Issue Detection** - Catch problems before release
+- ✅ **Proc-Macro Cross-Compilation Support** - Works with serde, tokio, async-trait, etc.
+- ✅ **Zero-Configuration Defaults** - Smart defaults that work out of the box
+- ✅ **Comprehensive Platform Support** - Linux, Windows, macOS, musl, ARM64
+
+### 🔧 Alternative: Single Action (Legacy)
+
+**Best for: Simple projects or gradual migration**
 
 ```yaml
 name: CI
@@ -35,8 +96,6 @@ jobs:
         with:
           command: ci
 ```
-
-### Cross-Platform Release
 
 ```yaml
 name: Release
@@ -130,14 +189,108 @@ This toolkit is designed for projects like:
 - **rez-tools** - CLI utilities
 - **rez-core** - Core libraries
 
+## ⚙️ Configuration Guide (v2.5.3)
+
+### 🎯 Project Types
+
+#### Binary Projects
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      rust-toolchain: stable
+      enable-coverage: true
+      release-target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-apple-darwin", "os": "macos-latest"}
+        ]
+```
+
+#### Rust + Python Projects
+```yaml
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      rust-toolchain: stable
+      enable-coverage: true
+      enable-python-wheel: true  # Enable Python wheel building
+      release-target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "aarch64-apple-darwin", "os": "macos-latest"}
+        ]
+```
+
+#### Library Projects
+```yaml
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      rust-toolchain: stable
+      enable-coverage: true
+      build-depth: basic  # Libraries don't need release build testing
+      test-release-builds: false  # Disable for library-only projects
+```
+
+### 🔧 Advanced Configuration
+
+#### Full Feature Set
+```yaml
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v2.5.3
+    with:
+      # Toolchain
+      rust-toolchain: stable
+
+      # Features
+      enable-coverage: true
+      enable-python-wheel: true
+      enable-security-audit: true
+
+      # Build configuration
+      build-depth: release  # basic | release | full
+      test-release-builds: true  # Default: true in v2.5.3
+      verify-ci-consistency: true
+
+      # Cross-compilation targets
+      release-target-platforms: |
+        [
+          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "i686-pc-windows-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
+          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+          {"target": "x86_64-apple-darwin", "os": "macos-latest"},
+          {"target": "aarch64-apple-darwin", "os": "macos-latest"}
+        ]
+```
+
+### 🎯 Key Configuration Tips
+
+1. **Target Consistency**: Always use the same targets in CI and Release workflows
+2. **Permissions**: Set appropriate permissions for each workflow
+3. **Build Depth**: Use `basic` for libraries, `release` for binaries
+4. **Python Wheels**: Enable only if your project has Python bindings
+5. **Security Audit**: Enable for production projects
+
 ## 📚 Examples
 
 See the `examples/` directory for complete project setups:
 
+- `ci-release-consistency-test/` - CI/Release consistency example
+- `enhanced-ci/` - Advanced CI configuration
+- `cross-compilation/` - Cross-compilation examples
 - `pure-crate/` - Pure crate example
 - `binary-crate/` - CLI tool example
 - `python-wheel/` - Python binding example
-- `enhanced-ci/` - Enhanced CI configuration examples
 
 ## ⚙️ Project Setup
 
@@ -189,12 +342,17 @@ git_release_draft = false
 - [Usage Guide](USAGE.md) - Detailed usage instructions
 - [Examples](examples/) - Complete project setups
 
+### 📚 Documentation & Best Practices
+- [Best Practices for v2.5.3](docs/BEST_PRACTICES_V2_5_3.md) - **Comprehensive configuration guide and best practices**
+- [Release Build Consistency](docs/RELEASE_BUILD_CONSISTENCY.md) - Fix disabled consistency tests and configuration
+- [CI Consistency Improvements](docs/CI_CONSISTENCY_IMPROVEMENTS.md) - Enhanced CI/Release workflow alignment
+
 ### 🔧 Troubleshooting Guides
-- [Cross-Compilation Issues](docs/CROSS_COMPILATION_ISSUES.md) - Comprehensive analysis and solutions
 - [Proc-Macro Cross-Compilation](docs/PROC_MACRO_CROSS_COMPILATION.md) - Fix proc-macro cross-compilation issues
+- [Cross-Compilation Issues](docs/CROSS_COMPILATION_ISSUES.md) - Comprehensive analysis and solutions
+- [Workflow Robustness Fixes](docs/WORKFLOW_ROBUSTNESS_FIXES.md) - Fix cross-platform workflow issues
 - [Memory Allocator Issues](docs/MIMALLOC_TROUBLESHOOTING.md) - Fix mimalloc and other allocator problems
 - [OpenSSL Troubleshooting](docs/OPENSSL_TROUBLESHOOTING.md) - Resolve compilation issues
-- [Workflow Robustness Fixes](docs/WORKFLOW_ROBUSTNESS_FIXES.md) - Fix cross-platform workflow issues
 - [GitHub Token Issues](docs/GITHUB_TOKEN_ISSUE.md) - Fix workflow permission problems
 - [GitHub Actions Linting](docs/GITHUB_ACTIONS_LINTING.md) - Validate workflow configurations
 
