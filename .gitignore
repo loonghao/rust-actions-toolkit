@@ -22,3 +22,6 @@ target/
 
 advanced-cdn-prd.md
 coverage
+
+# YoYo AI version control directory
+.yoyo/
