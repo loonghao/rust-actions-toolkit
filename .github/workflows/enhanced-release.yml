@@ -137,16 +137,18 @@ jobs:
       - name: Build summary
         if: always()
         run: |
-          echo "## Build Summary for ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target**: ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Binary**: ${{ needs.detect-binary.outputs.binary-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Archive**: ${{ steps.archive.outputs.archive-file || 'Failed to create' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Size**: ${{ steps.archive.outputs.archive-size || 'Unknown' }}" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- **Status**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## Build Summary for ${{ matrix.platform }}"
+            echo "- **Target**: ${{ matrix.target }}"
+            echo "- **Binary**: ${{ needs.detect-binary.outputs.binary-name }}"
+            echo "- **Archive**: ${{ steps.archive.outputs.archive-file || 'Failed to create' }}"
+            echo "- **Size**: ${{ steps.archive.outputs.archive-size || 'Unknown' }}"
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "- **Status**: ✅ Success"
+            else
+              echo "- **Status**: ❌ Failed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   release:
     name: Create Release
