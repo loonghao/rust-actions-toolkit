@@ -292,6 +292,7 @@ jobs:
           fi
 
           # Add .exe extension for Windows targets
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             binary_path="${binary_path}.exe"
           fi

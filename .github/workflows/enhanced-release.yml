@@ -161,6 +161,7 @@ jobs:
       - name: Check build results
         id: check-builds
         run: |
+          # shellcheck disable=SC2193
           echo "🔍 Checking build results..."
 
           # Count successful builds
@@ -168,33 +169,39 @@ jobs:
           TOTAL_COUNT=0
 
           # Check each platform that was requested
+          # shellcheck disable=SC2193
           if [[ "${{ inputs.platforms }}" == *"linux"* ]]; then
             TOTAL_COUNT=$((TOTAL_COUNT + 1))
+            # shellcheck disable=SC2193
             if [[ "${{ needs.build.result }}" == "success" ]]; then
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             fi
           fi
 
+          # shellcheck disable=SC2193
           if [[ "${{ inputs.platforms }}" == *"macos"* ]]; then
             TOTAL_COUNT=$((TOTAL_COUNT + 2))  # x86_64 + aarch64
             # Note: This is simplified - in reality we'd need to check individual matrix results
+            # shellcheck disable=SC2193
             if [[ "${{ needs.build.result }}" == "success" ]]; then
               SUCCESS_COUNT=$((SUCCESS_COUNT + 2))
             fi
           fi
 
+          # shellcheck disable=SC2193
           if [[ "${{ inputs.platforms }}" == *"windows"* ]]; then
             TOTAL_COUNT=$((TOTAL_COUNT + 1))
+            # shellcheck disable=SC2193
             if [[ "${{ needs.build.result }}" == "success" ]]; then
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             fi
           fi
 
           echo "✅ Successful builds: $SUCCESS_COUNT/$TOTAL_COUNT"
-          echo "success-count=$SUCCESS_COUNT" >> $GITHUB_OUTPUT
-          echo "total-count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+          echo "success-count=$SUCCESS_COUNT" >> "$GITHUB_OUTPUT"
+          echo "total-count=$TOTAL_COUNT" >> "$GITHUB_OUTPUT"
 
-          if [ $SUCCESS_COUNT -eq 0 ]; then
+          if [ "$SUCCESS_COUNT" -eq 0 ]; then
             echo "❌ No successful builds - cannot create release"
             exit 1
           fi
@@ -235,13 +242,15 @@ jobs:
       - name: Release Summary
         if: always()
         run: |
-          echo "## 🎉 Enhanced Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Binary**: ${{ needs.detect-binary.outputs.binary-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Successful builds**: ${{ steps.check-builds.outputs.success-count }}/${{ steps.check-builds.outputs.total-count }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release created**: ${{ steps.check-builds.outputs.success-count > 0 && 'Yes' || 'No' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ✅ Benefits Achieved" >> $GITHUB_STEP_SUMMARY
-          echo "- No cross-compilation complexity" >> $GITHUB_STEP_SUMMARY
-          echo "- No proc-macro issues" >> $GITHUB_STEP_SUMMARY
-          echo "- No Docker permission problems" >> $GITHUB_STEP_SUMMARY
-          echo "- Fast, reliable, native builds" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 🎉 Enhanced Release Summary"
+            echo "- **Binary**: ${{ needs.detect-binary.outputs.binary-name }}"
+            echo "- **Successful builds**: ${{ steps.check-builds.outputs.success-count }}/${{ steps.check-builds.outputs.total-count }}"
+            echo "- **Release created**: ${{ steps.check-builds.outputs.success-count > 0 && 'Yes' || 'No' }}"
+            echo ""
+            echo "### ✅ Benefits Achieved"
+            echo "- No cross-compilation complexity"
+            echo "- No proc-macro issues"
+            echo "- No Docker permission problems"
+            echo "- Fast, reliable, native builds"
+          } >> "$GITHUB_STEP_SUMMARY"
