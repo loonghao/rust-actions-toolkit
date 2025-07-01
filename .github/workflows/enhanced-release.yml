@@ -76,41 +76,57 @@ jobs:
             archive-name: windows-x86_64
 
     runs-on: ${{ matrix.os }}
-
-    # Only build requested platforms
-    if: ${{ contains(inputs.platforms, matrix.platform) }}
     
     steps:
+      - name: Check if platform should be built
+        id: check-platform
+        run: |
+          if [[ "${{ inputs.platforms }}" == *"${{ matrix.platform }}"* ]]; then
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Platform ${{ matrix.platform }} is requested"
+          else
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Platform ${{ matrix.platform }} is not requested, skipping"
+          fi
+
       - name: Checkout repository
+        if: steps.check-platform.outputs.should-build == 'true'
         uses: actions/checkout@v4
 
       - name: Make scripts executable
+        if: steps.check-platform.outputs.should-build == 'true'
         run: chmod +x .github/scripts/*.sh
 
       - name: Setup build environment
+        if: steps.check-platform.outputs.should-build == 'true'
         run: .github/scripts/setup-build-env.sh "${{ matrix.target }}" "${{ inputs.rust-toolchain }}"
 
       - name: Install Rust toolchain
+        if: steps.check-platform.outputs.should-build == 'true'
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-toolchain }}
           targets: ${{ matrix.target }}
 
       - name: Setup Rust cache
+        if: steps.check-platform.outputs.should-build == 'true'
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
           cache-on-failure: true
 
       - name: Build binary
+        if: steps.check-platform.outputs.should-build == 'true'
         id: build
         run: .github/scripts/build-binary.sh "${{ needs.detect-binary.outputs.binary-name }}" "${{ matrix.target }}"
 
       - name: Create archive
+        if: steps.check-platform.outputs.should-build == 'true'
         id: archive
         run: .github/scripts/create-archive.sh "${{ needs.detect-binary.outputs.binary-name }}" "${{ matrix.target }}" "${{ matrix.archive-name }}"
 
       - name: Upload artifact
+        if: steps.check-platform.outputs.should-build == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.archive-name }}

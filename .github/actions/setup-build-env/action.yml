@@ -3,7 +3,7 @@ description: 'Setup build environment for specific target and OS'
 author: 'rust-actions-toolkit'
 
 branding:
-  icon: 'tool'
+  icon: 'settings'
   color: 'blue'
 
 inputs:
