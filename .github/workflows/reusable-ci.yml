@@ -291,14 +291,12 @@ jobs:
           # Windows cross-compilation configuration (fixes mimalloc issues)
           # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"windows-gnu"* ]]; then
-            # shellcheck disable=SC2193
             if [[ "${{ matrix.target }}" == "i686-pc-windows-gnu" ]]; then
               {
                 echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix"
                 echo "CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix"
                 echo "AR_i686_pc_windows_gnu=i686-w64-mingw32-ar"
               } >> "$GITHUB_ENV"
-            # shellcheck disable=SC2193
             elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
               {
                 echo "CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix"
