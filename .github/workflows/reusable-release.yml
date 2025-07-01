@@ -127,10 +127,10 @@ jobs:
         if: contains(matrix.target, '-musl')
         shell: bash
         run: |
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> "$GITHUB_ENV"
+          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> "$GITHUB_ENV"
+          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
 
       - name: Configure Windows static linking
         shell: bash
@@ -151,10 +151,10 @@ jobs:
           HOST_TARGET="x86_64-unknown-linux-gnu"
 
           # Set basic Cargo configuration
-          echo "CARGO_TARGET_DIR=target" >> $GITHUB_ENV
+          echo "CARGO_TARGET_DIR=target" >> "$GITHUB_ENV"
 
           # Critical proc-macro fix: Ensure proc-macros are NEVER built for target platform
-          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> $GITHUB_ENV
+          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> "$GITHUB_ENV"
           echo "🛡️ Set CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER to protect proc-macros"
 
           if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
@@ -182,7 +182,7 @@ jobs:
           # Step 1: Determine if this is a binary project
           if [ ! -f "Cargo.toml" ]; then
             echo "⚠️ No Cargo.toml found, skipping binary upload"
-            echo "should-upload=false" >> $GITHUB_OUTPUT
+            echo "should-upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -225,14 +225,14 @@ jobs:
           fi
 
           # Output results
-          echo "should-upload=$should_upload" >> $GITHUB_OUTPUT
+          echo "should-upload=$should_upload" >> "$GITHUB_OUTPUT"
           if [ "$should_upload" = "true" ]; then
             if [ -n "$binary_name" ] && [ "$binary_name" != "" ]; then
-              echo "binary-name=$binary_name" >> $GITHUB_OUTPUT
+              echo "binary-name=$binary_name" >> "$GITHUB_OUTPUT"
               echo "📦 Binary name set for upload: $binary_name"
             else
               echo "❌ Binary project detected but no binary name found"
-              echo "should-upload=false" >> $GITHUB_OUTPUT
+              echo "should-upload=false" >> "$GITHUB_OUTPUT"
               should_upload="false"
             fi
           fi
@@ -268,7 +268,7 @@ jobs:
           # Use cross for cross-compilation, cargo for native builds
           if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ] && [ "$(uname -m)" = "x86_64" ] && [ "$(uname -s)" = "Linux" ]; then
             echo "🏠 Native build for ${{ matrix.target }}"
-            cargo build --release --bin ${{ steps.detect-binary.outputs.binary-name }}
+            cargo build --release --bin "${{ steps.detect-binary.outputs.binary-name }}"
           else
             echo "🌍 Cross-compilation build for ${{ matrix.target }}"
             # Install cross if not available
@@ -279,7 +279,7 @@ jobs:
 
             # Use cross for cross-compilation (it handles proc-macros correctly)
             # Disable custom Cross.toml to avoid Docker permission issues
-            CROSS_CONFIG="" cross build --release --target ${{ matrix.target }} --bin ${{ steps.detect-binary.outputs.binary-name }}
+            CROSS_CONFIG="" cross build --release --target "${{ matrix.target }}" --bin "${{ steps.detect-binary.outputs.binary-name }}"
           fi
 
           # Check if binary was built successfully
@@ -296,15 +296,15 @@ jobs:
 
           if [ -f "$binary_path" ]; then
             echo "✅ Binary built successfully: $binary_path"
-            echo "binary-path=$binary_path" >> $GITHUB_OUTPUT
-            echo "build-success=true" >> $GITHUB_OUTPUT
+            echo "binary-path=$binary_path" >> "$GITHUB_OUTPUT"
+            echo "build-success=true" >> "$GITHUB_OUTPUT"
 
             # Show binary info
             ls -la "$binary_path"
             file "$binary_path" 2>/dev/null || echo "file command not available"
           else
             echo "❌ Binary not found at expected path: $binary_path"
-            echo "build-success=false" >> $GITHUB_OUTPUT
+            echo "build-success=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create release archives
@@ -351,7 +351,7 @@ jobs:
           echo "📋 Created archives:"
           ls -la archives/
 
-          echo "archive-created=true" >> $GITHUB_OUTPUT
+          echo "archive-created=true" >> "$GITHUB_OUTPUT"
 
       - name: Upload release assets
         if: steps.detect-binary.outputs.should-upload == 'true' && steps.create-archives.outputs.archive-created == 'true'
@@ -438,10 +438,10 @@ jobs:
         shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "✅ pyproject.toml found, proceeding with Python wheel build"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "⚠️ pyproject.toml not found, skipping Python wheel build"
             exit 0
           fi
@@ -465,7 +465,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
 
       - name: Install maturin
         if: steps.check-pyproject.outputs.exists == 'true'
