@@ -127,10 +127,12 @@ jobs:
         if: contains(matrix.target, '-musl')
         shell: bash
         run: |
-          echo "OPENSSL_STATIC=1" >> "$GITHUB_ENV"
-          echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> "$GITHUB_ENV"
-          echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_ALLOW_CROSS=1" >> "$GITHUB_ENV"
+          {
+            echo "OPENSSL_STATIC=1"
+            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
+            echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl"
+            echo "PKG_CONFIG_ALLOW_CROSS=1"
+          } >> "$GITHUB_ENV"
 
       - name: Configure Windows static linking
         shell: bash

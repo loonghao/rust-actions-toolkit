@@ -338,10 +338,10 @@ jobs:
 
           if [[ "${{ matrix.target }}" == *"musl"* ]]; then
             echo "Using cross for musl target"
-            cross build --release --target ${{ matrix.target }}
+            cross build --release --target "${{ matrix.target }}"
           else
             echo "Using cargo for native target"
-            cargo build --release --target ${{ matrix.target }}
+            cargo build --release --target "${{ matrix.target }}"
           fi
 
           echo "✅ Release build successful for ${{ matrix.target }}"
@@ -353,9 +353,9 @@ jobs:
           echo "🔍 Verifying generated binary..."
 
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            find target/${{ matrix.target }}/release -name "*.exe" -type f | head -5 | xargs file
+            find "target/${{ matrix.target }}/release" -name "*.exe" -type f | head -5 | xargs file
           else
-            find target/${{ matrix.target }}/release -maxdepth 1 -type f -executable | head -5 | xargs file
+            find "target/${{ matrix.target }}/release" -maxdepth 1 -type f -executable | head -5 | xargs file
           fi
 
   # Security audit using rustsec database
@@ -424,9 +424,9 @@ jobs:
         shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "⚠️ pyproject.toml not found, skipping Python wheel test"
           fi
 
@@ -455,4 +455,4 @@ jobs:
         shell: bash
         run: |
           pip install target/wheels/*.whl
-          python -c "import $(basename $(pwd) | tr '-' '_'); print('Python wheel import successful')"
+          python -c "import $(basename "$(pwd)" | tr '-' '_'); print('Python wheel import successful')"
