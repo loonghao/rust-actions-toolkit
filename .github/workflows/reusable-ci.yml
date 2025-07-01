@@ -182,19 +182,24 @@ jobs:
         run: |
           dir="$RUNNER_TEMP/cross-download"
           mkdir "$dir"
-          echo "$dir" >> $GITHUB_PATH
+          echo "$dir" >> "$GITHUB_PATH"
           cd "$dir"
           curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
           tar xf cross-x86_64-unknown-linux-musl.tar.gz
-          echo "CARGO=cross" >> $GITHUB_ENV
-          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
-          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+          {
+            echo "CARGO=cross"
+            echo "TARGET_FLAGS=--target ${{ matrix.target }}"
+            echo "TARGET_DIR=./target/${{ matrix.target }}"
+          } >> "$GITHUB_ENV"
 
           # Set OpenSSL environment variables for cross-compilation
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-            echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
+            {
+              echo "OPENSSL_STATIC=1"
+              echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
+              echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl"
+            } >> "$GITHUB_ENV"
           fi
 
       - name: Build workspace
@@ -266,38 +271,51 @@ jobs:
         shell: bash
         run: |
           # Set common environment variables
-          echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
-          echo "RUST_BACKTRACE=1" >> $GITHUB_ENV
-          echo "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true" >> $GITHUB_ENV
+          {
+            echo "CARGO_TERM_COLOR=always"
+            echo "RUST_BACKTRACE=1"
+            echo "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true"
+          } >> "$GITHUB_ENV"
 
           # OpenSSL configuration (musl targets)
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-            echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-            echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
-            echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+            {
+              echo "OPENSSL_STATIC=1"
+              echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
+              echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl"
+              echo "PKG_CONFIG_ALLOW_CROSS=1"
+            } >> "$GITHUB_ENV"
           fi
 
           # Windows cross-compilation configuration (fixes mimalloc issues)
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"windows-gnu"* ]]; then
+            # shellcheck disable=SC2193
             if [[ "${{ matrix.target }}" == "i686-pc-windows-gnu" ]]; then
-              echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix" >> $GITHUB_ENV
-              echo "CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix" >> $GITHUB_ENV
-              echo "AR_i686_pc_windows_gnu=i686-w64-mingw32-ar" >> $GITHUB_ENV
+              {
+                echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix"
+                echo "CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix"
+                echo "AR_i686_pc_windows_gnu=i686-w64-mingw32-ar"
+              } >> "$GITHUB_ENV"
+            # shellcheck disable=SC2193
             elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
-              echo "CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix" >> $GITHUB_ENV
-              echo "CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix" >> $GITHUB_ENV
-              echo "AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar" >> $GITHUB_ENV
+              {
+                echo "CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix"
+                echo "CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix"
+                echo "AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar"
+              } >> "$GITHUB_ENV"
             fi
           fi
 
           # Windows MSVC configuration (avoid global RUSTFLAGS for proc-macro compatibility)
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"windows-msvc"* ]]; then
             echo "🔧 Configuring Windows static linking for ${{ matrix.target }}"
             echo "⚠️ Using target-specific RUSTFLAGS to avoid proc-macro issues"
             # Use target-specific environment variable instead of global RUSTFLAGS
             target_env=$(echo ${{ matrix.target }} | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-            echo "CARGO_TARGET_${target_env}_RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+            echo "CARGO_TARGET_${target_env}_RUSTFLAGS=-C target-feature=+crt-static" >> "$GITHUB_ENV"
           fi
 
           # Configure proc-macro cross-compilation (minimal approach)
@@ -309,7 +327,7 @@ jobs:
 
             # Minimal configuration - let Cargo handle proc-macro compilation automatically
             # Only set essential environment variables
-            echo "CARGO_TARGET_DIR=target" >> $GITHUB_ENV
+            echo "CARGO_TARGET_DIR=target" >> "$GITHUB_ENV"
 
             echo "✅ Cross-compilation environment ready"
           else
@@ -336,6 +354,7 @@ jobs:
         run: |
           echo "🔨 Testing release build for ${{ matrix.target }}..."
 
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"musl"* ]]; then
             echo "Using cross for musl target"
             cross build --release --target "${{ matrix.target }}"
@@ -352,6 +371,7 @@ jobs:
         run: |
           echo "🔍 Verifying generated binary..."
 
+          # shellcheck disable=SC2193
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             find "target/${{ matrix.target }}/release" -name "*.exe" -type f | head -5 | xargs file
           else
