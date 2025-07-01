@@ -1,0 +1,58 @@
+name: 'Setup Build Environment'
+description: 'Setup build environment for specific target and OS'
+author: 'rust-actions-toolkit'
+
+branding:
+  icon: 'tool'
+  color: 'blue'
+
+inputs:
+  target:
+    description: 'Rust target triple'
+    required: true
+  os:
+    description: 'Operating system'
+    required: true
+  rust-toolchain:
+    description: 'Rust toolchain version'
+    required: false
+    default: 'stable'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        targets: ${{ inputs.target }}
+
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ inputs.target }}
+        cache-on-failure: true
+
+    - name: Install cross for cross-compilation
+      if: inputs.target != 'x86_64-unknown-linux-gnu'
+      shell: bash
+      run: |
+        echo "📦 Installing cross for target: ${{ inputs.target }}"
+        cargo install cross --git https://github.com/cross-rs/cross
+
+    - name: Validate environment
+      shell: bash
+      run: |
+        echo "🔧 Validating build environment"
+        echo "🎯 Target: ${{ inputs.target }}"
+        echo "💻 OS: ${{ inputs.os }}"
+        echo "🦀 Toolchain: ${{ inputs.rust-toolchain }}"
+        
+        # Check Rust installation
+        rustc --version
+        cargo --version
+        
+        # Check if target is installed
+        rustup target list --installed | grep "${{ inputs.target }}" || echo "⚠️ Target not found in installed targets"
+        
+        echo "✅ Build environment validation complete"
