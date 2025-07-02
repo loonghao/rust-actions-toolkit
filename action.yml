@@ -207,11 +207,11 @@ runs:
         # Always ensure host toolchain is available for proc-macro compilation
         echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> $GITHUB_ENV
 
-        # Only set CARGO_BUILD_TARGET for actual cross-compilation scenarios
-        # This ensures proc-macros are built for host platform while final binary is built for target
+        # DO NOT set CARGO_BUILD_TARGET globally as it affects CI tests
+        # Instead, let taiki-e/upload-rust-binary-action handle target-specific builds
         if [ "${{ inputs.target }}" != "x86_64-unknown-linux-gnu" ] && [ "${{ runner.os }}" == "Linux" ]; then
-          echo "CARGO_BUILD_TARGET=${{ inputs.target }}" >> $GITHUB_ENV
-          echo "📦 Cross-compilation enabled: proc-macros will use host (x86_64-linux), binary will use target (${{ inputs.target }})"
+          echo "📦 Cross-compilation will be handled by upload-rust-binary-action for target (${{ inputs.target }})"
+          echo "🧪 CI tests will run on host platform (x86_64-linux) to avoid proc-macro issues"
         else
           echo "📦 Native compilation: proc-macros and binary both use host platform"
         fi
