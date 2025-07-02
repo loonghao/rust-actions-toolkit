@@ -77,27 +77,32 @@ jobs:
 
       - name: Validate composite actions
         run: |
-          for action_dir in actions/*/; do
-            if [ -d "$action_dir" ]; then
-              action_file="${action_dir}action.yml"
-              if [ ! -f "$action_file" ]; then
-                echo "❌ Missing action.yml in $action_dir"
-                exit 1
-              fi
+          # Check if actions directory exists
+          if [ -d "actions" ]; then
+            for action_dir in actions/*/; do
+              if [ -d "$action_dir" ]; then
+                action_file="${action_dir}action.yml"
+                if [ ! -f "$action_file" ]; then
+                  echo "❌ Missing action.yml in $action_dir"
+                  exit 1
+                fi
 
-              if ! grep -q "name:" "$action_file"; then
-                echo "❌ Missing 'name' field in $action_file"
-                exit 1
-              fi
+                if ! grep -q "name:" "$action_file"; then
+                  echo "❌ Missing 'name' field in $action_file"
+                  exit 1
+                fi
 
-              if ! grep -q "description:" "$action_file"; then
-                echo "❌ Missing 'description' field in $action_file"
-                exit 1
-              fi
+                if ! grep -q "description:" "$action_file"; then
+                  echo "❌ Missing 'description' field in $action_file"
+                  exit 1
+                fi
 
-              echo "✅ $action_file validation passed"
-            fi
-          done
+                echo "✅ $action_file validation passed"
+              fi
+            done
+          else
+            echo "ℹ️ No actions directory found - using simplified single action approach"
+          fi
 
       - name: Validate reusable workflows
         run: |
@@ -143,33 +148,35 @@ jobs:
             echo "✅ action.yml has valid YAML syntax"
           fi
 
-          # Validate composite actions
-          for action_file in actions/*/action.yml; do
-            if [ -f "$action_file" ]; then
-              echo "Validating $action_file..."
-              if ! yq eval '.' "$action_file" > /dev/null 2>&1; then
-                echo "❌ Invalid YAML syntax in $action_file"
-                exit 1
+          # Validate composite actions if they exist
+          if [ -d "actions" ]; then
+            for action_file in actions/*/action.yml; do
+              if [ -f "$action_file" ]; then
+                echo "Validating $action_file..."
+                if ! yq eval '.' "$action_file" > /dev/null 2>&1; then
+                  echo "❌ Invalid YAML syntax in $action_file"
+                  exit 1
+                fi
+                echo "✅ $action_file has valid YAML syntax"
               fi
-              echo "✅ $action_file has valid YAML syntax"
-            fi
-          done
+            done
+          else
+            echo "ℹ️ No composite actions found - using simplified single action approach"
+          fi
 
-  # Test our composite actions
-  test-actions:
-    name: Test Actions
+  # Test our main action
+  test-main-action:
+    name: Test Main Action
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test setup-rust-ci action
-        uses: ./actions/setup-rust-ci
+      - name: Test main action - CI command
+        uses: ./
         with:
-          toolchain: stable
-          check-format: false
-          check-clippy: false
-          check-docs: false
+          command: ci
+          rust-toolchain: stable
 
       - name: Verify Rust installation
         run: |
@@ -177,47 +184,30 @@ jobs:
           cargo --version
           echo "✅ Rust toolchain installed successfully"
 
-  # Test new setup-build-env action
-  test-build-env:
-    name: Test Build Environment Setup
+  # Test cross-platform compatibility
+  test-cross-platform:
+    name: Test Cross-Platform
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
-          - os: ubuntu-22.04
-            target: x86_64-pc-windows-gnu
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test setup-build-env action
-        uses: ./.github/actions/setup-build-env
+      - name: Test main action on different platforms
+        uses: ./
         with:
-          target: ${{ matrix.target }}
-          os: ${{ matrix.os }}
+          command: ci
           rust-toolchain: stable
 
-      - name: Verify environment setup
+      - name: Verify cross-platform compatibility
         run: |
-          echo "🔍 Verifying build environment..."
+          echo "🔍 Verifying cross-platform compatibility..."
           rustc --version
           cargo --version
-
-          # Check if target is installed
-          rustup target list --installed | grep "${{ matrix.target }}" || echo "⚠️ Target not found"
-
-          # Test basic build (if we have a Cargo.toml)
-          if [ -f "Cargo.toml" ]; then
-            echo "Testing basic build..."
-            cargo check --target ${{ matrix.target }} || echo "⚠️ Build check failed (expected for toolkit project)"
-          fi
-
-          echo "✅ Build environment test completed"
+          echo "✅ Cross-platform test completed on ${{ matrix.os }}"
 
   # Validate example configurations
   validate-examples:
