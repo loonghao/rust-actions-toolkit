@@ -7,25 +7,22 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, develop]
-  schedule:
-    - cron: '00 01 * * *'  # Daily at 1 AM UTC (optional)
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   ci:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@v3
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
-      # Optional: Enable/disable coverage reporting (default: true)
+      # Optional: Enable/disable coverage reporting (default: false)
       enable-coverage: true
-      # Optional: Enable/disable Python wheel testing (default: true)
+      # Optional: Enable/disable Python wheel testing (default: false)
       # Only runs if pyproject.toml exists
-      enable-python-wheel: true
-      # Optional: Specify cross version for cross-compilation
-      cross-version: v0.2.5
-      # Optional: Add additional target platforms (JSON array)
-      additional-targets: '[]'
+      enable-python-wheel: false
     secrets:
       # Optional: For code coverage reporting
       # Get this token from https://codecov.io/

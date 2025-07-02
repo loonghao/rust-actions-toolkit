@@ -8,56 +8,25 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
-  # Option 1: Use reusable workflow (traditional approach)
-  release-reusable:
-    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@v3
+  release:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
     with:
       # Optional: Customize Rust toolchain
       rust-toolchain: stable
       # Optional: Specify binary name (auto-detected from Cargo.toml if not provided)
       binary-name: ""
-      # Optional: Enable/disable Python wheels (default: true)
+      # Optional: Enable/disable Python wheels (default: false)
       # Only builds wheels if pyproject.toml exists
-      enable-python-wheels: true
-      # 2025 optimized platform strategy
-      target-platforms: |
-        [
-          {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "high"},
-          {"target": "x86_64-apple-darwin", "os": "macos-13", "priority": "high"},
-          {"target": "aarch64-apple-darwin", "os": "macos-13", "priority": "high"},
-          {"target": "x86_64-pc-windows-msvc", "os": "windows-2022", "priority": "high"},
-          {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04", "priority": "medium"},
-          {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
-          {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04", "priority": "medium"},
-          {"target": "x86_64-pc-windows-gnu", "os": "ubuntu-22.04", "priority": "low"}
-        ]
-    # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
-    # No secrets need to be passed for this workflow
-
-  # Option 2: Use smart-release action (recommended - zero config)
-  release-smart:
-    name: Smart Release (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 2025 core platforms for smart-release demo
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }
-          - { target: x86_64-apple-darwin, os: macos-13 }
-          - { target: aarch64-apple-darwin, os: macos-13 }
-          - { target: x86_64-pc-windows-msvc, os: windows-2022 }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit/actions/smart-release@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          target: ${{ matrix.target }}
+      enable-python-wheels: false
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # This reusable workflow:
-# 1. Builds binaries for all specified target platforms
-# 2. Uploads binaries to the GitHub release (created by release-plz)
-# 3. Builds Python wheels if pyproject.toml exists
-# 4. Handles cross-compilation automatically
-# 5. Creates appropriate archives (.tar.gz for Unix, .zip for Windows)
+# 1. Builds binaries natively for Linux, macOS, and Windows
+# 2. Uploads binaries to the GitHub release
+# 3. Builds Python wheels if enabled and pyproject.toml exists
+# 4. Creates appropriate archives (.tar.gz for Unix, .zip for Windows)

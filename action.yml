@@ -1,19 +1,19 @@
 name: 'Rust Actions Toolkit'
-description: '🦀 Universal GitHub Actions toolkit for Rust projects - CI/CD, cross-platform builds, releases, and Python wheels'
+description: '🦀 Simple and universal GitHub Actions toolkit for Rust projects - CI/CD, native builds, and releases'
 author: 'loonghao'
 
 inputs:
   command:
-    description: 'Command to run: ci, release, release-plz, or setup'
+    description: 'Command to run: ci, release, or release-plz'
     required: true
     default: 'ci'
-  
+
   # Common inputs
   rust-toolchain:
     description: 'Rust toolchain version'
     required: false
     default: 'stable'
-  
+
   # CI specific inputs
   check-format:
     description: 'Run cargo fmt --check (ci command)'
@@ -31,12 +31,8 @@ inputs:
     description: 'Additional arguments for clippy (ci command)'
     required: false
     default: '--all-targets --all-features -- -D warnings'
-  
+
   # Release specific inputs
-  target:
-    description: 'Target platform for release (release command)'
-    required: false
-    default: ''
   binary-name:
     description: 'Binary name to release (release command)'
     required: false
@@ -44,7 +40,7 @@ inputs:
   enable-python-wheels:
     description: 'Enable Python wheel building (release command)'
     required: false
-    default: 'true'
+    default: 'false'
   github-token:
     description: 'GitHub token for release uploads (release command)'
     required: false
@@ -55,7 +51,6 @@ inputs:
     description: 'Cargo registry token for crates.io publishing (release-plz command)'
     required: false
     default: ''
-
   release-plz-token:
     description: 'Enhanced GitHub PAT for cross-workflow triggers (release-plz command)'
     required: false
@@ -64,16 +59,6 @@ inputs:
     description: 'Release-plz command: release, release-pr, or both (release-plz command)'
     required: false
     default: 'both'
-
-  # Docker options (experimental)
-  use-docker:
-    description: 'Use Docker for builds (experimental)'
-    required: false
-    default: 'false'
-  docker-image:
-    description: 'Docker image to use (base, cross-compile, python-wheels, security-audit)'
-    required: false
-    default: 'base'
 
 outputs:
   rust-version:
@@ -108,7 +93,6 @@ runs:
           build-essential \
           pkg-config \
           libssl-dev \
-          musl-tools \
           curl \
           git
 
@@ -119,7 +103,6 @@ runs:
       with:
         toolchain: ${{ inputs.rust_toolchain }}
         components: rustfmt,clippy
-        targets: ${{ inputs.target }}
 
     - name: Get Rust version
       id: rust-version
@@ -130,7 +113,6 @@ runs:
         echo "version=$version" >> $GITHUB_OUTPUT
         echo "🦀 Installed Rust: $version"
         echo "📦 Cargo version: $(cargo --version)"
-        echo "🎯 Target: ${{ inputs.target }}"
 
     - name: Rust cache
       if: inputs.command != 'release-plz'
@@ -169,68 +151,18 @@ runs:
         echo "🧪 Running tests..."
         cargo test --verbose --workspace
 
-    # Release-specific steps
-    - name: Setup cross-compilation toolchain
-      if: inputs.command == 'release'
-      uses: taiki-e/setup-cross-toolchain-action@v1
-      with:
-        target: ${{ inputs.target }}
-      continue-on-error: true
-
-    - name: Install cross for musl targets
-      if: inputs.command == 'release' && contains(inputs.target, '-musl')
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cross
-
-    - name: Configure OpenSSL for musl targets
-      if: inputs.command == 'release' && contains(inputs.target, '-musl')
-      shell: bash
-      run: |
-        echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
-        echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-        echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl" >> $GITHUB_ENV
-        echo "PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-
-    - name: Configure Windows static linking
-      if: inputs.command == 'release' && endsWith(inputs.target, 'windows-msvc')
-      shell: bash
-      run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-
-    - name: Configure proc-macro cross-compilation
-      if: inputs.command == 'release'
-      shell: bash
-      run: |
-        echo "🔧 Configuring proc-macro cross-compilation for target: ${{ inputs.target }}"
-
-        # Critical fix: Ensure proc-macros are NEVER built for target platform
-        # Always ensure host toolchain is available for proc-macro compilation
-        echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=" >> $GITHUB_ENV
-
-        # DO NOT set CARGO_BUILD_TARGET globally as it affects CI tests
-        # Instead, let taiki-e/upload-rust-binary-action handle target-specific builds
-        if [ "${{ inputs.target }}" != "x86_64-unknown-linux-gnu" ] && [ "${{ runner.os }}" == "Linux" ]; then
-          echo "📦 Cross-compilation will be handled by upload-rust-binary-action for target (${{ inputs.target }})"
-          echo "🧪 CI tests will run on host platform (x86_64-linux) to avoid proc-macro issues"
-        else
-          echo "📦 Native compilation: proc-macros and binary both use host platform"
-        fi
-
-        # Ensure host toolchain is always available for proc-macros
-        rustup target add x86_64-unknown-linux-gnu || true
-
+    # Release-specific steps - Native compilation approach
     - name: Build and upload binary
       id: build-binary
       if: inputs.command == 'release'
       uses: taiki-e/upload-rust-binary-action@v1
       with:
         bin: ${{ inputs.binary_name }}
-        target: ${{ inputs.target }}
         tar: all
         zip: windows
         token: ${{ inputs.github_token }}
 
-    # Python wheel building (conditional)
+    # Python wheel building (optional)
     - name: Check for pyproject.toml
       id: check-pyproject
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true'
@@ -250,14 +182,6 @@ runs:
       with:
         python-version: '3.13'
 
-    - name: Setup cross-compilation for Python wheels (Linux ARM64)
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && runner.os == 'Linux' && inputs.target == 'aarch64-unknown-linux-gnu'
-      shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-
     - name: Install maturin
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
@@ -268,7 +192,7 @@ runs:
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
       run: |
-        maturin build --release --target ${{ inputs.target }}
+        maturin build --release
         wheel_path=$(find target/wheels -name "*.whl" | head -1)
         echo "wheel-path=$wheel_path" >> $GITHUB_OUTPUT
 

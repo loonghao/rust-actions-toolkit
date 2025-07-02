@@ -1,16 +1,16 @@
-# Example: Simplest possible CI setup using the GitHub Action
+# Example: Simple CI setup using the GitHub Action
 # Place this file at .github/workflows/ci.yml in your project
 
 name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  # All-in-one CI job - handles formatting, clippy, docs, and basic testing
+  # Simple CI job - handles formatting, clippy, docs, and testing
   ci:
     name: Rust CI
     runs-on: ubuntu-latest
@@ -18,18 +18,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run comprehensive Rust CI
-        uses: loonghao/rust-actions-toolkit@v3
+      - name: Run Rust CI
+        uses: loonghao/rust-actions-toolkit@main
         with:
           command: ci
           rust-toolchain: stable
-          check-format: true
-          check-clippy: true
-          check-docs: true
-          clippy-args: '--all-targets --all-features -- -D warnings'
 
-  # Optional: Cross-platform testing for libraries that need it
-  cross-platform-test:
+  # Optional: Cross-platform testing
+  test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -39,31 +35,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust (without checks)
-        uses: loonghao/rust-actions-toolkit@v3
-        with:
-          command: setup
-          rust-toolchain: stable
-
       - name: Run tests
-        run: cargo test --verbose --workspace
-
-  # Optional: Security audit
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
+        uses: loonghao/rust-actions-toolkit@main
         with:
-          tool: cargo-audit
-
-      - name: Run security audit
-        run: cargo audit --color never
-        continue-on-error: true  # Don't fail CI on audit issues
+          command: ci
+          rust-toolchain: stable

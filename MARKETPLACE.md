@@ -1,16 +1,15 @@
 # 🦀 Rust Actions Toolkit
 
-Universal GitHub Actions toolkit for Rust projects with support for CI/CD, cross-platform builds, releases, and Python wheels.
+Simple and universal GitHub Actions toolkit for Rust projects with native builds, CI/CD, and releases.
 
-## �?Features
+## �?Features
 
 - **🔍 Code Quality**: Automated formatting, linting, and documentation checks
-- **🧪 Testing**: Cross-platform testing on Linux, macOS, and Windows
-- **🔒 Security**: Automated vulnerability scanning with cargo-audit
-- **📊 Coverage**: Code coverage reporting with Codecov integration
-- **🚀 Releases**: Cross-platform binary releases with automated uploads
-- **🐍 Python**: Python wheel building and distribution
+- **🧪 Testing**: Native testing on Linux, macOS, and Windows
+- **� Releases**: Native binary releases with automated uploads
+- **🐍 Python**: Optional Python wheel building and distribution
 - **📦 Publishing**: Automated crates.io publishing with release-plz
+- **⚡ Simple**: Zero-configuration setup with sensible defaults
 
 ## 🚀 Quick Start
 
@@ -24,12 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@main
         with:
           command: ci
 ```
 
-### Cross-Platform Releases
+### Native Platform Releases
 
 ```yaml
 name: Release
@@ -41,19 +40,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@v2
+      - uses: loonghao/rust-actions-toolkit@main
         with:
           command: release
-          target: ${{ matrix.target }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
@@ -61,53 +53,41 @@ jobs:
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `command` | Command to run: `ci`, `release`, or `setup` | Yes | `ci` |
+| `command` | Command to run: `ci`, `release`, or `release-plz` | Yes | `ci` |
 | `rust-toolchain` | Rust toolchain version | No | `stable` |
-| `check-format` | Run cargo fmt --check (ci command) | No | `true` |
-| `check-clippy` | Run cargo clippy (ci command) | No | `true` |
-| `check-docs` | Run cargo doc (ci command) | No | `true` |
-| `target` | Target platform for release | No | Auto-detect |
 | `binary-name` | Binary name to release | No | Auto-detect |
+| `enable-python-wheels` | Enable Python wheel building | No | `false` |
 | `github-token` | GitHub token for uploads | No | `${{ github.token }}` |
-
-## 📤 Outputs
-
-| Output | Description |
-|--------|-------------|
-| `rust-version` | Installed Rust version |
-| `binary-path` | Path to built binary (release command) |
-| `wheel-path` | Path to built Python wheel (release command) |
 
 ## 🎯 Supported Project Types
 
 - **Pure Rust Crates**: Library projects published to crates.io
-- **Binary Crates**: CLI tools with cross-platform releases
-- **Python Wheels**: Rust projects with Python bindings using maturin
+- **Binary Crates**: CLI tools with native platform releases
+- **Python Wheels**: Rust projects with Python bindings using maturin (optional)
 
 ## 🔧 Advanced Usage
+
+### Python Wheel Projects
+
+For projects with `pyproject.toml`, enable Python wheel building:
+
+```yaml
+- uses: loonghao/rust-actions-toolkit@main
+  with:
+    command: release
+    enable-python-wheels: true
+```
 
 ### Custom Clippy Configuration
 
 ```yaml
-- uses: loonghao/rust-actions-toolkit@v2
+- uses: loonghao/rust-actions-toolkit@main
   with:
     command: ci
-    clippy-args: '--all-targets --all-features -- -D warnings -D clippy::pedantic'
+    clippy-args: '--all-targets --all-features -- -D warnings'
 ```
 
-### Python Wheel Projects
-
-For projects with `pyproject.toml`, Python wheels are automatically built:
-
-```yaml
-- uses: loonghao/rust-actions-toolkit@v2
-  with:
-    command: release
-    target: x86_64-unknown-linux-gnu
-    enable-python-wheels: true
-```
-
-## 🏷�?Versioning
+## 🏷�?Versioning
 
 Use specific versions for stability:
 

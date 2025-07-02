@@ -1,7 +1,7 @@
 name: Reusable CI
 
-# Reusable workflow for Rust CI
-# Can be called from other repositories
+# Simple and universal reusable workflow for Rust CI
+# Focuses on native compilation for each platform
 
 on:
   workflow_call:
@@ -11,47 +11,16 @@ on:
         required: false
         type: string
         default: 'stable'
-      cross-version:
-        description: 'Cross compilation tool version'
-        required: false
-        type: string
-        default: 'v0.2.5'
       enable-coverage:
         description: 'Enable code coverage reporting'
         required: false
         type: boolean
-        default: true
+        default: false
       enable-python-wheel:
         description: 'Enable Python wheel testing'
         required: false
         type: boolean
-        default: true
-      additional-targets:
-        description: 'Additional target platforms (JSON array)'
-        required: false
-        type: string
-        default: '[]'
-
-      # Enhanced: Build depth configuration
-      build-depth:
-        description: 'Build depth: basic, release, full'
-        required: false
-        type: string
-        default: 'basic'
-
-      # Enhanced: Test release builds for consistency
-      test-release-builds:
-        description: 'Test release builds to match release workflow'
-        required: false
-        type: boolean
-        default: true
-
-      # Enhanced: Release target platforms for consistency testing
-      release-target-platforms:
-        description: 'Target platforms to test (should match release workflow)'
-        required: false
-        type: string
-        default: '[]'
+        default: false
     secrets:
       CODECOV_TOKEN:
         description: 'Codecov token for coverage reporting'
@@ -61,348 +30,49 @@ on:
 # The calling workflow should include:
 # permissions:
 #   contents: read
-#   actions: read          # For security audit
-#   security-events: write # For security audit
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  CROSS_VERSION: ${{ inputs.cross-version }}
 
 jobs:
-  # Code formatting check
-  rustfmt:
-    name: Rustfmt
+  # Code quality checks
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Run CI checks
+        uses: ./
         with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-          components: rustfmt
+          command: ci
+          rust-toolchain: ${{ inputs.rust-toolchain }}
 
-      - name: Check formatting
-        run: cargo fmt --all --check
-
-  # Clippy linting
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-          components: clippy
-
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-  # Documentation check
-  docs:
-    name: Docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-
-      - name: Check documentation
-        env:
-          RUSTDOCFLAGS: -D warnings
-        run: cargo doc --no-deps --document-private-items --workspace
-
-  # Comprehensive testing across platforms
+  # Native testing across platforms
   test:
-    name: Test - ${{ matrix.build }}
-    runs-on: ${{ matrix.os }}
-    env:
-      CARGO: cargo
-      TARGET_FLAGS:
-      TARGET_DIR: ./target
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Default targets
-          - build: stable
-            os: ubuntu-latest
-            rust: ${{ inputs.rust-toolchain }}
-            target: x86_64-unknown-linux-gnu
-          - build: stable-musl
-            os: ubuntu-latest
-            rust: ${{ inputs.rust-toolchain }}
-            target: x86_64-unknown-linux-musl
-          - build: macos
-            os: macos-latest
-            rust: ${{ inputs.rust-toolchain }}
-            target: x86_64-apple-darwin
-          - build: win-msvc
-            os: windows-latest
-            rust: ${{ inputs.rust-toolchain }}
-            target: x86_64-pc-windows-msvc
-          - build: win-gnu
-            os: windows-latest
-            rust: stable-x86_64-gnu
-            target: x86_64-pc-windows-gnu
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install packages (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            pkg-config \
-            libssl-dev \
-            musl-tools \
-            curl \
-            git
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: ${{ matrix.target }}
-
-      - name: Use Cross
-        if: matrix.os == 'ubuntu-latest' && matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu'
-        run: |
-          dir="$RUNNER_TEMP/cross-download"
-          mkdir "$dir"
-          echo "$dir" >> "$GITHUB_PATH"
-          cd "$dir"
-          curl -LO "https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz"
-          tar xf cross-x86_64-unknown-linux-musl.tar.gz
-          {
-            echo "CARGO=cross"
-            echo "TARGET_FLAGS=--target ${{ matrix.target }}"
-            echo "TARGET_DIR=./target/${{ matrix.target }}"
-          } >> "$GITHUB_ENV"
-
-          # Set OpenSSL environment variables for cross-compilation
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            {
-              echo "OPENSSL_STATIC=1"
-              echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
-              echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl"
-            } >> "$GITHUB_ENV"
-          fi
-
-      - name: Build workspace
-        run: ${{ env.CARGO }} build --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (sans cross)
-        if: matrix.target == '' || matrix.target == 'x86_64-unknown-linux-gnu' || matrix.os != 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-      - name: Run tests (with cross)
-        if: matrix.target != '' && matrix.target != 'x86_64-unknown-linux-gnu' && matrix.os == 'ubuntu-latest'
-        run: ${{ env.CARGO }} test --verbose --workspace ${{ env.TARGET_FLAGS }}
-
-  # Enhanced: Release build consistency testing
-  test-release-consistency:
-    name: Release Build Consistency Test - ${{ matrix.target }}
-    if: ${{ inputs.test-release-builds }}
+    name: Test - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(inputs.release-target-platforms) }}
-
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install system packages (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            pkg-config \
-            libssl-dev \
-            musl-tools \
-            curl \
-            git \
-            file
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Run tests
+        uses: ./
         with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          targets: ${{ matrix.target }}
+          command: ci
+          rust-toolchain: ${{ inputs.rust-toolchain }}
 
-      - name: Install host toolchain for proc-macros
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          targets: x86_64-unknown-linux-gnu
-
-      - name: Setup cross-compilation toolchain (non-musl)
-        uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
-        if: |
-          startsWith(matrix.os, 'ubuntu') &&
-          !contains(matrix.target, '-musl')
-        continue-on-error: true
-
-      - name: Install cross for musl targets
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cross
-        if: contains(matrix.target, '-musl')
-
-      - name: Configure environment variables
-        shell: bash
-        run: |
-          # Set common environment variables
-          {
-            echo "CARGO_TERM_COLOR=always"
-            echo "RUST_BACKTRACE=1"
-            echo "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG=true"
-          } >> "$GITHUB_ENV"
-
-          # OpenSSL configuration (musl targets)
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            {
-              echo "OPENSSL_STATIC=1"
-              echo "OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu"
-              echo "OPENSSL_INCLUDE_DIR=/usr/include/openssl"
-              echo "PKG_CONFIG_ALLOW_CROSS=1"
-            } >> "$GITHUB_ENV"
-          fi
-
-          # Windows cross-compilation configuration (fixes mimalloc issues)
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"windows-gnu"* ]]; then
-            if [[ "${{ matrix.target }}" == "i686-pc-windows-gnu" ]]; then
-              {
-                echo "CC_i686_pc_windows_gnu=i686-w64-mingw32-gcc-posix"
-                echo "CXX_i686_pc_windows_gnu=i686-w64-mingw32-g++-posix"
-                echo "AR_i686_pc_windows_gnu=i686-w64-mingw32-ar"
-              } >> "$GITHUB_ENV"
-            elif [[ "${{ matrix.target }}" == "x86_64-pc-windows-gnu" ]]; then
-              {
-                echo "CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc-posix"
-                echo "CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++-posix"
-                echo "AR_x86_64_pc_windows_gnu=x86_64-w64-mingw32-ar"
-              } >> "$GITHUB_ENV"
-            fi
-          fi
-
-          # Windows MSVC configuration (avoid global RUSTFLAGS for proc-macro compatibility)
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"windows-msvc"* ]]; then
-            echo "🔧 Configuring Windows static linking for ${{ matrix.target }}"
-            echo "⚠️ Using target-specific RUSTFLAGS to avoid proc-macro issues"
-            # Use target-specific environment variable instead of global RUSTFLAGS
-            target_env=$(echo ${{ matrix.target }} | tr '[:lower:]' '[:upper:]' | tr '-' '_')
-            echo "CARGO_TARGET_${target_env}_RUSTFLAGS=-C target-feature=+crt-static" >> "$GITHUB_ENV"
-          fi
-
-          # Configure proc-macro cross-compilation (minimal approach)
-          HOST_TARGET="x86_64-unknown-linux-gnu"
-          if [ "${{ matrix.target }}" != "$HOST_TARGET" ]; then
-            echo "🔄 Configuring cross-compilation for target: ${{ matrix.target }}"
-            echo "📦 Proc-macros will automatically use host platform: $HOST_TARGET"
-            echo "🎯 Final binary will be built for: ${{ matrix.target }}"
-
-            # Minimal configuration - let Cargo handle proc-macro compilation automatically
-            # Only set essential environment variables
-            echo "CARGO_TARGET_DIR=target" >> "$GITHUB_ENV"
-
-            echo "✅ Cross-compilation environment ready"
-          else
-            echo "✅ Native compilation for $HOST_TARGET"
-          fi
-
-      - name: Configure Cross.toml
-        shell: bash
-        run: |
-          # Ensure Cross.toml exists and is properly configured
-          if [ ! -f "Cross.toml" ]; then
-            echo "Creating default Cross.toml for cross-compilation..."
-            echo "🔧 Using ultimate proc-macro configuration to completely avoid compilation conflicts"
-            curl -sSL -o Cross.toml https://raw.githubusercontent.com/loonghao/rust-actions-toolkit/main/examples/cross-compilation/Cross-proc-macro-ultimate.toml
-            echo "✅ Downloaded ultimate Cross.toml with complete proc-macro compatibility"
-          else
-            echo "Cross.toml already exists, skipping creation"
-            echo "⚠️ Note: Ensure your Cross.toml properly handles proc-macro cross-compilation"
-            echo "   Proc-macros should be built for host platform, not target platform"
-          fi
-
-      - name: Test release build (mirrors release workflow)
-        shell: bash
-        run: |
-          echo "🔨 Testing release build for ${{ matrix.target }}..."
-
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
-            echo "Using cross for musl target"
-            cross build --release --target "${{ matrix.target }}"
-          else
-            echo "Using cargo for native target"
-            cargo build --release --target "${{ matrix.target }}"
-          fi
-
-          echo "✅ Release build successful for ${{ matrix.target }}"
-
-      - name: Verify binary (optional)
-        if: ${{ inputs.build-depth == 'full' }}
-        shell: bash
-        run: |
-          echo "🔍 Verifying generated binary..."
-
-          # shellcheck disable=SC2193
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            find "target/${{ matrix.target }}/release" -name "*.exe" -type f | head -5 | xargs file
-          else
-            find "target/${{ matrix.target }}/release" -maxdepth 1 -type f -executable | head -5 | xargs file
-          fi
-
-  # Security audit using rustsec database
-  security_audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-audit
-
-      - name: Run security audit
-        run: cargo audit --color never
-        continue-on-error: true  # Don't fail CI on audit issues, just report them
-
-  # Code coverage reporting
+  # Optional: Code coverage
   coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
+    name: Coverage
     if: ${{ inputs.enable-coverage }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -410,67 +80,49 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
+          toolchain: ${{ inputs.rust-toolchain }}
+          components: llvm-tools-preview
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
-      - name: Generate code coverage
+      - name: Generate coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: false
-          verbose: true
-          flags: unittests
-          name: codecov-umbrella
 
-  # Python wheel testing (conditional)
+  # Optional: Python wheel testing
   python-wheel:
     name: Python Wheel Test
-    runs-on: ubuntu-latest
     if: ${{ inputs.enable-python-wheel }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Check for pyproject.toml
         id: check-pyproject
-        shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "🐍 pyproject.toml found"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "exists=false" >> $GITHUB_OUTPUT
             echo "⚠️ pyproject.toml not found, skipping Python wheel test"
           fi
 
-      - name: Set up Python
+      - name: Test Python wheel build
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: ./
         with:
-          python-version: '3.13'
-
-      - name: Install Rust toolchain
-        if: steps.check-pyproject.outputs.exists == 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
-
-      - name: Install maturin
-        if: steps.check-pyproject.outputs.exists == 'true'
-        run: pip install maturin[patchelf]
-
-      - name: Build Python wheel
-        if: steps.check-pyproject.outputs.exists == 'true'
-        run: maturin build --release
-
-      - name: Test Python wheel
-        if: steps.check-pyproject.outputs.exists == 'true'
-        shell: bash
-        run: |
-          pip install target/wheels/*.whl
-          python -c "import $(basename "$(pwd)" | tr '-' '_'); print('Python wheel import successful')"
+          command: release
+          enable-python-wheels: true
+          rust-toolchain: ${{ inputs.rust-toolchain }}
