@@ -116,7 +116,7 @@ runs:
 
     - name: Rust cache
       if: inputs.command != 'release-plz'
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
       with:
         shared-key: "rust-toolkit-cache"
 
@@ -155,7 +155,7 @@ runs:
     - name: Build and upload binary
       id: build-binary
       if: inputs.command == 'release'
-      uses: taiki-e/upload-rust-binary-action@v1
+      uses: taiki-e/upload-rust-binary-action@3962470d6e7f1993108411bc3f75a135ec67fc8c # v1
       with:
         bin: ${{ inputs.binary_name }}
         tar: all
@@ -178,7 +178,7 @@ runs:
 
     - name: Set up Python
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
       with:
         python-version: '3.13'
 
@@ -198,7 +198,7 @@ runs:
 
     - name: Upload wheels to release
       if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2
       with:
         files: ${{ steps.build-wheel.outputs.wheel-path }}
         token: ${{ inputs.github_token }}
@@ -206,7 +206,7 @@ runs:
     # Release-plz steps
     - name: Checkout repository (for release-plz)
       if: inputs.command == 'release-plz'
-      uses: actions/checkout@v4
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
         fetch-depth: 0
         token: ${{ inputs.release_plz_token || inputs.github_token }}
@@ -222,7 +222,7 @@ runs:
     - name: Run release-plz release
       id: release-plz-release
       if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release' || inputs.release_plz_command == 'both')
-      uses: release-plz/action@v0.5
+      uses: release-plz/action@ccf6dd998441f26020f4315f1ebe95d9e2e42600 # v0.5
       with:
         command: release
       env:
@@ -232,7 +232,7 @@ runs:
     - name: Run release-plz release-pr
       id: release-plz-pr
       if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release-pr' || inputs.release_plz_command == 'both')
-      uses: release-plz/action@v0.5
+      uses: release-plz/action@ccf6dd998441f26020f4315f1ebe95d9e2e42600 # v0.5
       with:
         command: release-pr
       env:
