@@ -50,19 +50,19 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Setup cross-compilation toolchain
-        uses: taiki-e/setup-cross-toolchain-action@v1
+        uses: taiki-e/setup-cross-toolchain-action@0123528f956f923e7a476f4cc04882bc005e7c89 # v1
         with:
           target: ${{ matrix.target }}
         if: startsWith(matrix.os, 'ubuntu') && !contains(matrix.target, '-musl')
 
       - name: Install cross for musl targets
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@f37a1e4d34f3e1c6a571e294b0258f2805eab48d # v2
         with:
           tool: cross
         if: contains(matrix.target, '-musl')
@@ -73,7 +73,7 @@ jobs:
 
       # Auto-detect binary name from Cargo.toml
       - name: Upload binary assets
-        uses: taiki-e/upload-rust-binary-action@v1
+        uses: taiki-e/upload-rust-binary-action@3962470d6e7f1993108411bc3f75a135ec67fc8c # v1
         with:
           # This will auto-detect the binary name from Cargo.toml
           # For projects with multiple binaries, specify: bin: binary1,binary2
@@ -106,7 +106,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Check for pyproject.toml
         id: check-pyproject
@@ -122,7 +122,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.13'
 
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload wheels to release
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2
         with:
           files: target/wheels/*.whl
           token: ${{ secrets.GITHUB_TOKEN }}
