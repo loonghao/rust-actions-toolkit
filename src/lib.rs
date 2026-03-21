@@ -9,7 +9,7 @@
 #![doc = include_str!("../README.md")]
 
 /// This crate is a GitHub Actions toolkit, not a Rust library.
-/// 
+///
 /// Please refer to the GitHub repository for usage instructions:
 /// https://github.com/loonghao/rust-actions-toolkit
 pub fn github_actions_toolkit() {
