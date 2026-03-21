@@ -129,7 +129,7 @@ runs:
     # Setup MSVC developer environment on Windows
     - name: Setup MSVC developer environment
       if: runner.os == 'Windows' && inputs.setup-msvc == 'true' && inputs.command != 'release-plz'
-      uses: ilammy/msvc-dev-cmd@v1
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
 
     - name: Fix link.exe conflict on Windows
       if: runner.os == 'Windows' && inputs.setup-msvc == 'true' && inputs.command != 'release-plz'
@@ -168,7 +168,7 @@ runs:
 
     - name: Rust cache
       if: inputs.command != 'release-plz' && inputs.enable-cache == 'true'
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       with:
         shared-key: "rust-toolkit-${{ inputs.command }}"
         workspaces: "${{ inputs.working-directory }} -> target"
@@ -176,7 +176,7 @@ runs:
     # sccache setup (optional, for large projects)
     - name: Setup sccache
       if: inputs.command != 'release-plz' && inputs.enable-sccache == 'true'
-      uses: mozilla-actions/sccache-action@v0.0.6
+      uses: mozilla-actions/sccache-action@9e326ebed976843c9932b3aa0e021c6f50310eb4 # v0.0.6
 
     - name: Configure sccache env
       if: inputs.command != 'release-plz' && inputs.enable-sccache == 'true'
@@ -229,7 +229,7 @@ runs:
     # Install nextest if needed
     - name: Install cargo-nextest
       if: inputs.command == 'ci' && inputs.use-nextest == 'true'
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@b988c18e3de947a10207d5289ed90fae4e2c51f1 # v2
       with:
         tool: cargo-nextest
 
@@ -267,7 +267,7 @@ runs:
     - name: Build and upload binary
       id: build-binary
       if: inputs.command == 'release'
-      uses: taiki-e/upload-rust-binary-action@v1
+      uses: taiki-e/upload-rust-binary-action@0e34102c043ded9f2ca39f7af5cd99a540c61aff # v1
       with:
         bin: ${{ inputs.binary-name }}
         tar: all
@@ -291,7 +291,7 @@ runs:
 
     - name: Set up Python
       if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
       with:
         python-version: '3.13'
 
@@ -312,7 +312,7 @@ runs:
 
     - name: Upload wheels to release
       if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2
       with:
         files: ${{ steps.build-wheel.outputs.wheel-path }}
         token: ${{ inputs.github-token }}
@@ -322,7 +322,7 @@ runs:
     # ========================================
     - name: Checkout repository (for release-plz)
       if: inputs.command == 'release-plz'
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         fetch-depth: 0
         token: ${{ inputs.release-plz-token || inputs.github-token }}
@@ -336,7 +336,7 @@ runs:
     - name: Run release-plz release
       id: release-plz-release
       if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release' || inputs.release-plz-command == 'both')
-      uses: release-plz/action@v0.5
+      uses: release-plz/action@1528104d2ca23787631a1c1f022abb64b34c1e11 # v0.5
       with:
         command: release
       env:
@@ -346,7 +346,7 @@ runs:
     - name: Run release-plz release-pr
       id: release-plz-pr
       if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release-pr' || inputs.release-plz-command == 'both')
-      uses: release-plz/action@v0.5
+      uses: release-plz/action@1528104d2ca23787631a1c1f022abb64b34c1e11 # v0.5
       with:
         command: release-pr
       env:

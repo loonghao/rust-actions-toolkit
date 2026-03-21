@@ -80,12 +80,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       # MSVC setup for Windows-only projects (like msvc-kit)
       - name: Setup MSVC developer environment
         if: inputs.setup-msvc && runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
 
       - name: Fix link.exe conflict on Windows
         if: inputs.setup-msvc && runner.os == 'Windows'
@@ -108,7 +108,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           cache-on-failure: true
           workspaces: "${{ inputs.working-directory }} -> target"
@@ -116,7 +116,7 @@ jobs:
       # sccache for large projects (like vx, auroraview)
       - name: Setup sccache
         if: inputs.enable-sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@9e326ebed976843c9932b3aa0e021c6f50310eb4 # v0.0.6
 
       - name: Configure sccache
         if: inputs.enable-sccache
@@ -163,7 +163,7 @@ jobs:
       # Install nextest via install-action (much faster than cargo install)
       - name: Install cargo-nextest
         if: inputs.use-nextest
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@b988c18e3de947a10207d5289ed90fae4e2c51f1 # v2
         with:
           tool: cargo-nextest
 
@@ -198,7 +198,7 @@ jobs:
       # Security audit via install-action (faster)
       - name: Install cargo-audit
         if: inputs.enable-audit
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@b988c18e3de947a10207d5289ed90fae4e2c51f1 # v2
         with:
           tool: cargo-audit
 
@@ -213,7 +213,7 @@ jobs:
       # Coverage via install-action
       - name: Install cargo-llvm-cov
         if: inputs.enable-coverage
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@b988c18e3de947a10207d5289ed90fae4e2c51f1 # v2
         with:
           tool: cargo-llvm-cov
 
@@ -233,7 +233,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: inputs.enable-coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
