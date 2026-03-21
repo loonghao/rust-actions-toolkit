@@ -122,8 +122,8 @@ jobs:
         if: inputs.enable-sccache
         shell: bash
         run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
 
       - name: Check formatting
         shell: bash
@@ -143,7 +143,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo clippy --workspace $FEATURES_FLAG ${{ inputs.clippy-args }}
+          cargo clippy --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.clippy-args }}
 
       - name: Check documentation
         shell: bash
@@ -158,7 +158,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo doc --no-deps --document-private-items --workspace $FEATURES_FLAG
+          cargo doc --no-deps --document-private-items --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"}
 
       # Install nextest via install-action (much faster than cargo install)
       - name: Install cargo-nextest
@@ -179,7 +179,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo nextest run --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+          cargo nextest run --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
 
       - name: Run tests (cargo test)
         if: ${{ !inputs.use-nextest }}
@@ -193,7 +193,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo test --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+          cargo test --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
 
       # Security audit via install-action (faster)
       - name: Install cargo-audit
@@ -229,7 +229,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo llvm-cov --workspace $FEATURES_FLAG --lcov --output-path lcov.info
+          cargo llvm-cov --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         if: inputs.enable-coverage
@@ -242,19 +242,21 @@ jobs:
       - name: CI Summary
         shell: bash
         run: |
-          echo "## ✅ Core CI Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Code formatting | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Clippy lints | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Documentation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.enable-audit }}" = "true" ]; then
-            echo "| Security audit | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
-          fi
-          if [ "${{ inputs.enable-coverage }}" = "true" ]; then
-            echo "| Code coverage | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Toolchain:** ${{ inputs.rust-toolchain }} | **Runner:** ${{ inputs.runner }}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## ✅ Core CI Results"
+            echo ""
+            echo "| Check | Status |"
+            echo "|-------|--------|"
+            echo "| Code formatting | ✅ Passed |"
+            echo "| Clippy lints | ✅ Passed |"
+            echo "| Documentation | ✅ Passed |"
+            echo "| Tests | ✅ Passed |"
+            if [ "${{ inputs.enable-audit }}" = "true" ]; then
+              echo "| Security audit | ✅ Passed |"
+            fi
+            if [ "${{ inputs.enable-coverage }}" = "true" ]; then
+              echo "| Code coverage | ✅ Generated |"
+            fi
+            echo ""
+            echo "**Toolchain:** ${{ inputs.rust-toolchain }} | **Runner:** ${{ inputs.runner }}"
+          } >> "$GITHUB_STEP_SUMMARY"
