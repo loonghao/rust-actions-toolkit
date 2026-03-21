@@ -1,12 +1,13 @@
-name: Release-plz
+name: Release Please
 
-# Release-plz workflow for rust-actions-toolkit
-# Handles automatic version management, changelog generation, and GitHub releases
-# Does NOT publish to crates.io (this is a GitHub Actions toolkit, not a Rust crate)
+# Automated release management using release-please
+# - On push to master: creates/updates a release PR with version bump and changelog
+# - When release PR is merged: creates GitHub release with tag
+# - Tag creation triggers publish-action.yml for Marketplace publishing
 
 permissions:
-  pull-requests: write
   contents: write
+  pull-requests: write
 
 on:
   push:
@@ -14,62 +15,17 @@ on:
       - master
 
 jobs:
-  # Create GitHub releases for the Actions toolkit
-  release-plz-release:
-    name: Release-plz release
+  release-please:
+    name: Release Please
     runs-on: ubuntu-latest
-    # Only run for non-fork repositories to prevent forks from triggering releases
     if: ${{ github.event.repository.fork == false }}
-    permissions:
-      contents: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-          # Use PAT to allow triggering other workflows (like release.yml)
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run release-plz
-        uses: release-plz/action@v0.5
-        with:
-          command: release
-        env:
-          # Use PAT to allow triggering other workflows, ensure no whitespace
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-          # No CARGO_REGISTRY_TOKEN needed - we don't publish to crates.io
-
-  # Create a PR with the new versions and changelog, preparing the next release
-  release-plz-pr:
-    name: Release-plz PR
-    runs-on: ubuntu-latest
-    # Only run for non-fork repositories to prevent forks from triggering releases
-    if: ${{ github.event.repository.fork == false }}
-    permissions:
-      contents: write
-      pull-requests: write
-    concurrency:
-      group: release-plz-${{ github.ref }}
-      cancel-in-progress: false
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          # Use PAT to allow triggering CI workflows on the release PR
-          token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run release-plz
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
-        env:
-          # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
-          # No CARGO_REGISTRY_TOKEN needed - we don't publish to crates.io

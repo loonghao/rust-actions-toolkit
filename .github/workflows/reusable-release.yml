@@ -1,7 +1,10 @@
 name: Reusable Release
 
-# Simple and universal reusable workflow for Rust releases
-# Focuses on native compilation for each platform
+# Universal reusable release workflow for Rust projects
+# Supports: multi-platform native builds, Python wheels, MSVC, static linking
+#
+# IMPORTANT: This workflow inlines all steps directly (not via `uses: ./`)
+# to ensure correct behavior when called from external repositories.
 
 on:
   workflow_call:
@@ -12,46 +15,198 @@ on:
         type: string
         default: 'stable'
       binary-name:
-        description: 'Binary name to release (auto-detected if not specified)'
+        description: 'Binary name(s) to release, comma-separated (auto-detected if not specified)'
         required: false
         type: string
         default: ''
+      working-directory:
+        description: 'Working directory for cargo commands'
+        required: false
+        type: string
+        default: '.'
       enable-python-wheels:
-        description: 'Enable Python wheel building'
+        description: 'Enable Python wheel building and uploading'
         required: false
         type: boolean
         default: false
+      setup-msvc:
+        description: 'Setup MSVC developer environment on Windows'
+        required: false
+        type: boolean
+        default: false
+      target-platforms:
+        description: |
+          JSON array of target platforms to build for.
+          Each entry: {"target": "<rust-target>", "os": "<github-runner>"}
+          Default builds for Linux (gnu + musl), macOS (x64 + ARM), Windows (MSVC)
+        required: false
+        type: string
+        default: |
+          [
+            {"target": "x86_64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+            {"target": "x86_64-unknown-linux-musl", "os": "ubuntu-22.04"},
+            {"target": "aarch64-unknown-linux-gnu", "os": "ubuntu-22.04"},
+            {"target": "aarch64-unknown-linux-musl", "os": "ubuntu-22.04"},
+            {"target": "x86_64-apple-darwin", "os": "macos-13"},
+            {"target": "aarch64-apple-darwin", "os": "macos-14"},
+            {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"},
+            {"target": "aarch64-pc-windows-msvc", "os": "windows-2022"}
+          ]
     # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
-
-# Note: Permissions are inherited from the calling workflow
-# The calling workflow should include:
-# permissions:
-#   contents: write  # For uploading release assets
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_HTTP_TIMEOUT: 600
+  CARGO_NET_RETRY: 10
 
 jobs:
-  # Native release builds for each platform
+  # ==========================================
+  # Native binary release builds
+  # ==========================================
   release:
-    name: Release - ${{ matrix.os }}
+    name: Release (${{ matrix.platform.target }})
     if: startsWith(github.ref_name, 'v')
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        platform: ${{ fromJson(inputs.target-platforms) }}
     timeout-minutes: 60
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Build and upload release
-        uses: ./
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          command: release
-          binary-name: ${{ inputs.binary-name }}
-          enable-python-wheels: ${{ inputs.enable-python-wheels }}
-          rust-toolchain: ${{ inputs.rust-toolchain }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          targets: ${{ matrix.platform.target }}
+
+      # Cross-compilation setup for Linux targets
+      - name: Setup cross-compilation toolchain
+        uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+        if: startsWith(matrix.platform.os, 'ubuntu') && !contains(matrix.platform.target, '-musl')
+
+      - name: Install cross for musl targets
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+        if: contains(matrix.platform.target, '-musl')
+
+      # MSVC setup for Windows
+      - name: Setup MSVC developer environment
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix link.exe conflict on Windows
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitPath = (Get-Command git -ErrorAction SilentlyContinue).Source
+          if ($gitPath) {
+            $gitDir = Split-Path (Split-Path $gitPath)
+            $linkPath = Join-Path $gitDir "usr\bin\link.exe"
+            if (Test-Path $linkPath) {
+              Remove-Item $linkPath -Force
+              Write-Host "Removed conflicting Git link.exe"
+            }
+          }
+
+      # Static linking for Windows MSVC targets
+      - name: Configure Windows static linking
+        if: endsWith(matrix.platform.target, 'windows-msvc')
+        shell: bash
+        run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          workspaces: "${{ inputs.working-directory }} -> target"
+
+      # Upload binary assets (auto-detects binary name from Cargo.toml)
+      - name: Upload binary assets
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: ${{ inputs.binary-name }}
+          target: ${{ matrix.platform.target }}
+          tar: all
+          zip: windows
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================================
+  # Python wheels (optional)
+  # ==========================================
+  python-wheels:
+    name: Python Wheel (${{ matrix.platform.target }})
+    if: startsWith(github.ref_name, 'v') && inputs.enable-python-wheels
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check for pyproject.toml
+        id: check-pyproject
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ pyproject.toml found"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ pyproject.toml not found, skipping"
+          fi
+
+      - name: Set up Python
+        if: steps.check-pyproject.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Rust toolchain
+        if: steps.check-pyproject.outputs.exists == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Setup cross-compilation (Linux ARM64)
+        if: steps.check-pyproject.outputs.exists == 'true' && matrix.platform.os == 'ubuntu-latest' && matrix.platform.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Install maturin
+        if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
+        run: pip install maturin[patchelf]
+
+      - name: Build Python wheels
+        if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: maturin build --release --target ${{ matrix.platform.target }}
+
+      - name: Upload wheels to release
+        if: steps.check-pyproject.outputs.exists == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/wheels/*.whl
+          token: ${{ secrets.GITHUB_TOKEN }}

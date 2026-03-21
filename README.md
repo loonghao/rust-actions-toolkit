@@ -12,17 +12,21 @@
 ## ✨ Features
 
 - **🔍 Code Quality**: Automated formatting, linting, and documentation checks
-- **🧪 Testing**: Native testing on Linux, macOS, and Windows
-- **🚀 Releases**: Native binary releases and automatic uploads
-- **🐍 Python**: Optional Python wheel building and distribution
-- **📦 Publishing**: Automated crates.io publishing with release-plz
-- **⚡ Simple**: Zero-configuration setup with sensible defaults
+- **🧪 Testing**: Cross-platform testing on Linux, macOS, and Windows with optional `cargo-nextest`
+- **🔒 Security**: Automated vulnerability scanning with `cargo-audit`
+- **📊 Coverage**: Code coverage reporting with Codecov integration
+- **🚀 Releases**: Multi-platform native binary releases with automatic uploads
+- **🐍 Python**: Optional Python wheel building and distribution via maturin
+- **📦 Publishing**: Automated crates.io publishing with release-plz (reusable workflow)
+- **🏗️ Workspace**: Full support for Cargo workspace / monorepo projects
+- **⚡ MSVC**: First-class MSVC developer environment support on Windows
+- **🔧 sccache**: Optional sccache for faster compilation on large projects
 
 ## 🚀 Quick Start
 
 ### 🌟 Recommended: Reusable Workflows
 
-**Simple setup for modern Rust projects**
+**Simple zero-config setup for modern Rust projects**
 
 Create `.github/workflows/ci.yml`:
 ```yaml
@@ -52,17 +56,14 @@ permissions:
 jobs:
   release:
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
-    with:
-      rust-toolchain: stable
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 **✨ What You Get:**
-- ✅ **Native Compilation** - No complex cross-compilation setup needed
-- ✅ **Multi-Platform Support** - Automatic builds for Linux, macOS, and Windows
+- ✅ **Multi-Platform Testing** - Automatic testing on Linux, macOS, and Windows
+- ✅ **Native Compilation** - Platform-native builds (no complex cross-compilation)
 - ✅ **Zero Configuration** - Works out of the box with sensible defaults
-- ✅ **Simple and Reliable** - Focus on your code, not CI complexity
+- ✅ **Security Audit** - Automated vulnerability scanning
+- ✅ **Binary Releases** - Automatic multi-platform binary uploads to GitHub Releases
 
 ### 🔧 Alternative: Single Action
 
@@ -75,42 +76,44 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: loonghao/rust-actions-toolkit@main
         with:
           command: ci
 ```
 
-```yaml
-name: Release
-on:
-  push:
-    tags: ["v*"]
-jobs:
-  release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: loonghao/rust-actions-toolkit@main
-        with:
-          command: release
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
 ## 📋 Inputs
+
+### Common Inputs
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `command` | Command to run: `ci`, `release`, or `release-plz` | No | `ci` |
 | `rust-toolchain` | Rust toolchain version | No | `stable` |
-| `check-format` | Run cargo fmt --check (ci command) | No | `true` |
-| `check-clippy` | Run cargo clippy (ci command) | No | `true` |
-| `check-docs` | Run cargo doc (ci command) | No | `true` |
-| `binary-name` | Binary name to release | No | Auto-detected |
+| `working-directory` | Working directory for cargo commands (workspace support) | No | `.` |
+| `cargo-features` | Cargo features to enable (`"all"` or comma-separated list) | No | `''` |
+| `enable-cache` | Enable Rust compilation cache | No | `true` |
+| `enable-sccache` | Enable sccache for faster compilation | No | `false` |
+| `setup-msvc` | Setup MSVC developer environment on Windows | No | `false` |
+
+### CI Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `check-format` | Run `cargo fmt --check` | No | `true` |
+| `check-clippy` | Run `cargo clippy` | No | `true` |
+| `check-docs` | Run `cargo doc` | No | `true` |
+| `clippy-args` | Additional arguments for clippy | No | `--all-targets -- -D warnings` |
+| `use-nextest` | Use `cargo-nextest` for faster parallel testing | No | `false` |
+| `test-args` | Additional arguments for test runner | No | `''` |
+
+### Release Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `binary-name` | Binary name(s) to release, comma-separated | No | Auto-detected |
 | `enable-python-wheels` | Enable Python wheel building | No | `false` |
-| `github-token` | GitHub token for uploads | No | `${{ github.token }}` |
+| `github-token` | GitHub token for release uploads | No | `''` |
 
 ## 📤 Outputs
 
@@ -122,123 +125,136 @@ jobs:
 
 ## 🎯 Supported Project Types
 
-- **Pure Rust Crate**: Library projects published to crates.io
-- **Binary Crate**: CLI tools with native platform releases
-- **Python Wheels**: Rust + Python binding projects using maturin (optional)
+| Project Type | Features | Example |
+|-------------|----------|---------|
+| **Pure Rust Crate** | CI + crates.io publishing | Library projects |
+| **Binary Crate** | CI + multi-platform binary releases | CLI tools like [vx](https://github.com/loonghao/vx), [clawup](https://github.com/loonghao/clawup) |
+| **Workspace / Monorepo** | CI with `working-directory` support | Multi-crate projects |
+| **MSVC Project** | CI with MSVC developer environment | Windows-native tools like [msvc-kit](https://github.com/loonghao/msvc-kit) |
+| **Python Wheels** | CI + maturin wheel building | Rust + Python bindings like [auroraview](https://github.com/loonghao/auroraview) |
 
-## ⚙️ Configuration
+## ⚙️ Reusable Workflow Options
 
-### CI Workflow
+### Reusable CI (`reusable-ci.yml`)
 
-The CI workflow includes:
+| Input | Description | Default |
+|-------|-------------|---------|
+| `rust-toolchain` | Rust toolchain version | `stable` |
+| `working-directory` | Working directory | `.` |
+| `cargo-features` | Features to enable | `''` |
+| `use-nextest` | Use cargo-nextest | `false` |
+| `enable-coverage` | Enable code coverage | `false` |
+| `enable-audit` | Enable security audit | `true` |
+| `enable-python-wheel` | Enable Python wheel testing | `false` |
+| `setup-msvc` | Setup MSVC on Windows | `false` |
+| `test-platforms` | JSON array of test runners | `["ubuntu-latest", "macos-latest", "windows-latest"]` |
 
-- **Code Formatting** - `cargo fmt --check`
-- **Linting** - `cargo clippy`
-- **Documentation** - `cargo doc`
-- **Testing** - Native testing on each platform
-- **Optional Coverage** - Code coverage reporting
-- **Optional Python Wheels** - Python wheel testing
+### Reusable Release (`reusable-release.yml`)
 
-### Release Workflow
+| Input | Description | Default |
+|-------|-------------|---------|
+| `binary-name` | Binary name(s) | Auto-detected |
+| `enable-python-wheels` | Build Python wheels | `false` |
+| `setup-msvc` | Setup MSVC on Windows | `false` |
+| `target-platforms` | JSON array of build targets | All major platforms |
 
-The release workflow supports:
+### Reusable Release-plz (`reusable-release-plz.yml`)
 
-- **Binary Releases** - Native compilation for each platform
-- **Python Wheels** - Optional multi-platform wheel building
-- **Asset Upload** - Automatic GitHub release assets
+For projects that use [release-plz](https://release-plz.ieni.dev/) for automated version management and crates.io publishing.
 
-### Release-plz
+## 📚 Examples
 
-Automated version management:
-
-- **Version Bumping** - Semantic versioning
-- **Changelog Generation** - Automatic changelog
-- **Crates.io Publishing** - Automated publishing
-- **GitHub Releases** - Release creation
-
-## 🎯 Supported Projects
-
-This toolkit is designed for projects like:
-
-- **vx shimexe** - Binary tools
-- **py2pyd** - Python wheel projects
-- **rez-tools** - CLI utilities
-- **rez-core** - Core libraries
-
-## ⚙️ Configuration Options
-
-### Optional Features
-
-Enable optional features by adding them to your workflow:
+### Workspace Project (like clawup, vx)
 
 ```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
 jobs:
   ci:
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
     with:
-      rust-toolchain: stable
-      enable-coverage: true        # Enable code coverage
-      enable-python-wheel: true    # Enable Python wheel testing
+      use-nextest: true
+      enable-coverage: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 ```
 
-### Python Wheel Projects
-
-For projects with Python bindings:
+### MSVC Project (like msvc-kit)
 
 ```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
+    with:
+      setup-msvc: true
+      test-platforms: '["windows-latest"]'
+```
+
+### Python Wheel Project (like auroraview)
+
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  ci:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-ci.yml@main
+    with:
+      enable-python-wheel: true
+      enable-coverage: true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+# .github/workflows/release.yml
+name: Release
+on:
+  push:
+    tags: ['v*']
 jobs:
   release:
     uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release.yml@main
     with:
-      rust-toolchain: stable
-      enable-python-wheels: true   # Build Python wheels
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      enable-python-wheels: true
 ```
 
-## 📚 Examples
+### Release with release-plz (for crates.io publishing)
 
-See the `examples/` directory for complete project setups:
+```yaml
+# .github/workflows/release-plz.yml
+name: Release-plz
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  release-plz:
+    uses: loonghao/rust-actions-toolkit/.github/workflows/reusable-release-plz.yml@main
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+```
 
-- `pure-crate/` - Library crate example
-- `binary-crate/` - CLI tool example
-- `python-wheel/` - Python binding example
-- `reusable-workflows/` - Workflow examples
+See the `examples/` directory for more complete project setups.
 
 ## ⚙️ Project Setup
 
 ### Required Files
 
-To use this toolkit in your Rust project, you need:
+To use this toolkit in your Rust project, you only need:
 
 1. **Cargo.toml** - Standard Rust project file
-2. **release-plz.toml** - Automated release configuration (optional)
 
 ### Optional Secrets
 
 Add these secrets to your GitHub repository if needed:
 
-- `CARGO_REGISTRY_TOKEN` - Your crates.io API token (for publishing)
+- `CARGO_REGISTRY_TOKEN` - Your crates.io API token (for publishing via release-plz)
 - `CODECOV_TOKEN` - Your Codecov token (for coverage reporting)
-
-### Automated Release Setup
-
-For automated releases, create a `release-plz.toml` file:
-
-```toml
-[[package]]
-name = "your-package-name"  # Change to your package name
-changelog_update = true
-git_release_enable = true
-release = true
-git_tag_name = "v{{version}}"
-```
-
-### Workflow
-
-1. **Push to main** → Development and testing
-2. **Create tag** → `release.yml` builds native binaries for all platforms
-3. **Upload binaries** → Users can download from GitHub releases page
 
 ## 📚 Documentation
 
@@ -257,5 +273,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [release-please Documentation](https://github.com/googleapis/release-please)
 - [release-plz Documentation](https://release-plz.ieni.dev/)
 - [Maturin Documentation](https://www.maturin.rs/)

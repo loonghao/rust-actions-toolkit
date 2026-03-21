@@ -13,7 +13,7 @@ keywords = ["github-actions", "ci-cd", "rust", "cross-platform", "automation"]
 categories = ["development-tools"]
 
 # This is a GitHub Actions toolkit, not a Rust library
-# We include a minimal Cargo.toml for release-plz compatibility
+# We include a minimal Cargo.toml for release-please compatibility
 # but don't publish to crates.io
 
 [dependencies]

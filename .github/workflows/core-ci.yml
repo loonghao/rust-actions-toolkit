@@ -1,8 +1,8 @@
 name: Core CI
 
 # Reusable workflow for core Rust CI functionality
-# Inspired by turbo-cdn v0.4.1 success case
-# Zero configuration, reasonable defaults, optimized for speed and reliability
+# Zero configuration with sensible defaults, optimized for speed and reliability
+# Supports: workspace projects, cargo features, nextest, MSVC, sccache
 
 on:
   workflow_call:
@@ -12,6 +12,21 @@ on:
         required: false
         type: string
         default: 'stable'
+      working-directory:
+        description: 'Working directory for cargo commands (workspace projects)'
+        required: false
+        type: string
+        default: '.'
+      cargo-features:
+        description: 'Cargo features to enable ("all" for --all-features, or comma-separated list)'
+        required: false
+        type: string
+        default: ''
+      use-nextest:
+        description: 'Use cargo-nextest for faster parallel test execution'
+        required: false
+        type: boolean
+        default: false
       enable-coverage:
         description: 'Enable code coverage reporting'
         required: false
@@ -22,19 +37,69 @@ on:
         required: false
         type: boolean
         default: true
+      enable-sccache:
+        description: 'Enable sccache for faster compilation'
+        required: false
+        type: boolean
+        default: false
+      setup-msvc:
+        description: 'Setup MSVC developer environment (Windows-only projects)'
+        required: false
+        type: boolean
+        default: false
+      runner:
+        description: 'Runner OS for CI (e.g. ubuntu-22.04, windows-latest)'
+        required: false
+        type: string
+        default: 'ubuntu-22.04'
+      clippy-args:
+        description: 'Additional arguments for clippy'
+        required: false
+        type: string
+        default: '--all-targets -- -D warnings'
+      test-args:
+        description: 'Additional arguments for test runner'
+        required: false
+        type: string
+        default: ''
     secrets:
       CODECOV_TOKEN:
         description: 'Codecov token for coverage reporting'
         required: false
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_HTTP_TIMEOUT: 600
+  CARGO_NET_RETRY: 10
+
 jobs:
   ci:
     name: Core CI
-    runs-on: ubuntu-22.04
-    
+    runs-on: ${{ inputs.runner }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      # MSVC setup for Windows-only projects (like msvc-kit)
+      - name: Setup MSVC developer environment
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix link.exe conflict on Windows
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitPath = (Get-Command git -ErrorAction SilentlyContinue).Source
+          if ($gitPath) {
+            $gitDir = Split-Path (Split-Path $gitPath)
+            $linkPath = Join-Path $gitDir "usr\bin\link.exe"
+            if (Test-Path $linkPath) {
+              Remove-Item $linkPath -Force
+              Write-Host "Removed conflicting Git link.exe"
+            }
+          }
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -46,67 +111,150 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          workspaces: "${{ inputs.working-directory }} -> target"
+
+      # sccache for large projects (like vx, auroraview)
+      - name: Setup sccache
+        if: inputs.enable-sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Configure sccache
+        if: inputs.enable-sccache
+        shell: bash
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
 
       - name: Check formatting
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "🎨 Checking code formatting..."
           cargo fmt --all -- --check
 
       - name: Run Clippy
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "📎 Running Clippy..."
-          cargo clippy --all-targets --all-features -- -D warnings
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo clippy --workspace $FEATURES_FLAG ${{ inputs.clippy-args }}
 
       - name: Check documentation
-        run: |
-          echo "📚 Checking documentation..."
-          cargo doc --no-deps --document-private-items --all-features
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         env:
           RUSTDOCFLAGS: "-D warnings"
+        run: |
+          echo "📚 Checking documentation..."
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo doc --no-deps --document-private-items --workspace $FEATURES_FLAG
 
-      - name: Run tests
+      # Install nextest via install-action (much faster than cargo install)
+      - name: Install cargo-nextest
+        if: inputs.use-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Run tests (nextest)
+        if: inputs.use-nextest
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "🧪 Running tests with cargo-nextest..."
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo nextest run --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+
+      - name: Run tests (cargo test)
+        if: ${{ !inputs.use-nextest }}
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "🧪 Running tests..."
-          cargo test --all-features
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo test --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+
+      # Security audit via install-action (faster)
+      - name: Install cargo-audit
+        if: inputs.enable-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
 
       - name: Security audit
         if: inputs.enable-audit
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "🔒 Running security audit..."
-          cargo install cargo-audit
           cargo audit
+
+      # Coverage via install-action
+      - name: Install cargo-llvm-cov
+        if: inputs.enable-coverage
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
       - name: Code coverage
         if: inputs.enable-coverage
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           echo "📊 Generating code coverage..."
-          cargo install cargo-llvm-cov
-          cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo llvm-cov --workspace $FEATURES_FLAG --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         if: inputs.enable-coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: false
 
       - name: CI Summary
+        shell: bash
         run: |
-          echo "✅ Core CI completed successfully!"
-          echo "📋 What was checked:"
-          echo "  - Code formatting (cargo fmt)"
-          echo "  - Code quality (cargo clippy)"
-          echo "  - Documentation (cargo doc)"
-          echo "  - Unit tests (cargo test)"
+          echo "## ✅ Core CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code formatting | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Clippy lints | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
           if [ "${{ inputs.enable-audit }}" = "true" ]; then
-            echo "  - Security audit (cargo audit)"
+            echo "| Security audit | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
           fi
           if [ "${{ inputs.enable-coverage }}" = "true" ]; then
-            echo "  - Code coverage (cargo llvm-cov)"
+            echo "| Code coverage | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
           fi
-          echo ""
-          echo "🎯 Core CI: Fast, reliable, comprehensive"
-          echo "   ⚡ Optimized for speed and reliability"
-          echo "   🛡️ No cross-compilation complexity"
-          echo "   🚀 Production-ready CI that just works"
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Toolchain:** ${{ inputs.rust-toolchain }} | **Runner:** ${{ inputs.runner }}" >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,10 @@
 name: Reusable CI
 
-# Simple and universal reusable workflow for Rust CI
-# Focuses on native compilation for each platform
+# Universal reusable CI workflow for Rust projects
+# Supports: workspaces, cargo features, nextest, MSVC, multi-platform testing
+#
+# IMPORTANT: This workflow inlines all steps directly (not via `uses: ./`)
+# to ensure correct behavior when called from external repositories.
 
 on:
   workflow_call:
@@ -11,71 +14,230 @@ on:
         required: false
         type: string
         default: 'stable'
+      working-directory:
+        description: 'Working directory for cargo commands (workspace projects)'
+        required: false
+        type: string
+        default: '.'
+      cargo-features:
+        description: 'Cargo features to enable ("all" for --all-features, or comma-separated)'
+        required: false
+        type: string
+        default: ''
+      use-nextest:
+        description: 'Use cargo-nextest for faster parallel test execution'
+        required: false
+        type: boolean
+        default: false
       enable-coverage:
         description: 'Enable code coverage reporting'
         required: false
         type: boolean
         default: false
+      enable-audit:
+        description: 'Enable security audit'
+        required: false
+        type: boolean
+        default: true
       enable-python-wheel:
         description: 'Enable Python wheel testing'
         required: false
         type: boolean
         default: false
+      setup-msvc:
+        description: 'Setup MSVC developer environment on Windows'
+        required: false
+        type: boolean
+        default: false
+      test-platforms:
+        description: 'Platforms to test on (JSON array, e.g. ["ubuntu-latest","windows-latest","macos-latest"])'
+        required: false
+        type: string
+        default: '["ubuntu-latest", "macos-latest", "windows-latest"]'
+      clippy-args:
+        description: 'Additional arguments for clippy'
+        required: false
+        type: string
+        default: '--all-targets -- -D warnings'
+      test-args:
+        description: 'Additional arguments for test runner'
+        required: false
+        type: string
+        default: ''
     secrets:
       CODECOV_TOKEN:
         description: 'Codecov token for coverage reporting'
         required: false
 
-# Note: Permissions are inherited from the calling workflow
-# The calling workflow should include:
-# permissions:
-#   contents: read
-
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_HTTP_TIMEOUT: 600
+  CARGO_NET_RETRY: 10
 
 jobs:
-  # Code quality checks
+  # ==========================================
+  # Code quality checks (runs on Linux only for speed)
+  # ==========================================
   check:
-    name: Check
+    name: Code Quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Run CI checks
-        uses: ./
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
         with:
-          command: ci
-          rust-toolchain: ${{ inputs.rust-toolchain }}
+          toolchain: ${{ inputs.rust-toolchain }}
+          components: rustfmt, clippy
 
-  # Native testing across platforms
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          workspaces: "${{ inputs.working-directory }} -> target"
+
+      - name: Check formatting
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo clippy --workspace $FEATURES_FLAG ${{ inputs.clippy-args }}
+
+      - name: Check documentation
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: |
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo doc --no-deps --document-private-items --workspace $FEATURES_FLAG
+
+  # ==========================================
+  # Cross-platform testing
+  # ==========================================
   test:
-    name: Test - ${{ matrix.os }}
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ fromJson(inputs.test-platforms) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Run tests
-        uses: ./
+      # MSVC setup for Windows
+      - name: Setup MSVC developer environment
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Fix link.exe conflict on Windows
+        if: inputs.setup-msvc && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitPath = (Get-Command git -ErrorAction SilentlyContinue).Source
+          if ($gitPath) {
+            $gitDir = Split-Path (Split-Path $gitPath)
+            $linkPath = Join-Path $gitDir "usr\bin\link.exe"
+            if (Test-Path $linkPath) {
+              Remove-Item $linkPath -Force
+              Write-Host "Removed conflicting Git link.exe"
+            }
+          }
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
         with:
-          command: ci
-          rust-toolchain: ${{ inputs.rust-toolchain }}
+          toolchain: ${{ inputs.rust-toolchain }}
+          components: rustfmt, clippy
 
-  # Optional: Code coverage
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          workspaces: "${{ inputs.working-directory }} -> target"
+
+      # Install nextest via install-action (much faster than cargo install)
+      - name: Install cargo-nextest
+        if: inputs.use-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: Run tests (nextest)
+        if: inputs.use-nextest
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo nextest run --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+
+      - name: Run tests (cargo test)
+        if: ${{ !inputs.use-nextest }}
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo test --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+
+  # ==========================================
+  # Security audit
+  # ==========================================
+  audit:
+    name: Security Audit
+    if: ${{ inputs.enable-audit }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Run security audit
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: cargo audit
+
+  # ==========================================
+  # Code coverage (optional)
+  # ==========================================
   coverage:
     name: Coverage
     if: ${{ inputs.enable-coverage }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -83,46 +245,77 @@ jobs:
           toolchain: ${{ inputs.rust-toolchain }}
           components: llvm-tools-preview
 
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          workspaces: "${{ inputs.working-directory }} -> target"
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-llvm-cov
 
       - name: Generate coverage
-        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          FEATURES_FLAG=""
+          if [ "${{ inputs.cargo-features }}" = "all" ]; then
+            FEATURES_FLAG="--all-features"
+          elif [ -n "${{ inputs.cargo-features }}" ]; then
+            FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+          fi
+          cargo llvm-cov --workspace $FEATURES_FLAG --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: false
 
-  # Optional: Python wheel testing
+  # ==========================================
+  # Python wheel testing (optional)
+  # ==========================================
   python-wheel:
     name: Python Wheel Test
     if: ${{ inputs.enable-python-wheel }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check for pyproject.toml
         id: check-pyproject
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
         run: |
           if [ -f "pyproject.toml" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "🐍 pyproject.toml found"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ pyproject.toml not found, skipping Python wheel test"
+            echo "⚠️ pyproject.toml not found, skipping"
           fi
 
-      - name: Test Python wheel build
+      - name: Set up Python
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: ./
+        uses: actions/setup-python@v5
         with:
-          command: release
-          enable-python-wheels: true
-          rust-toolchain: ${{ inputs.rust-toolchain }}
+          python-version: '3.13'
+
+      - name: Install Rust toolchain
+        if: steps.check-pyproject.outputs.exists == 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Install maturin and build
+        if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          pip install maturin[patchelf]
+          maturin build --release
+          echo "✅ Python wheel built successfully"

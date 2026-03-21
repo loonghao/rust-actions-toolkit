@@ -1,6 +1,7 @@
 name: Reusable Release-plz
 
 # Reusable workflow for release-plz automation
+# Handles: version bumping, changelog generation, crates.io publishing, GitHub releases
 # Can be called from other repositories
 
 on:
@@ -18,29 +19,31 @@ on:
       CARGO_REGISTRY_TOKEN:
         description: 'Cargo registry token for crates.io publishing'
         required: true
-      # Note: GITHUB_TOKEN is automatically provided by GitHub Actions
 
 # Note: Permissions are inherited from the calling workflow
 # The calling workflow should include:
 # permissions:
-#   contents: write        # For creating releases and tags
-#   pull-requests: write   # For creating release PRs
+#   contents: write
+#   pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_HTTP_TIMEOUT: 600
+  CARGO_NET_RETRY: 10
 
 jobs:
   # Release unpublished packages to crates.io
   release-plz-release:
     name: Release-plz release
     runs-on: ubuntu-latest
-    # Only run for non-fork repositories to prevent forks from triggering releases
     if: ${{ github.event.repository.fork == false }}
     permissions:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # Use PAT to allow triggering other workflows (like release.yml)
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
@@ -48,29 +51,18 @@ jobs:
         with:
           toolchain: ${{ inputs.rust-toolchain || 'stable' }}
 
-      - name: Install GitHub CLI
-        run: |
-          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-          && sudo apt update \
-          && sudo apt install gh -y
-
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
           command: release
         env:
-          # Use PAT to allow triggering other workflows, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # Create a PR with the new versions and changelog, preparing the next release
+  # Create a PR with the new versions and changelog
   release-plz-pr:
     name: Release-plz PR
     runs-on: ubuntu-latest
-    # Only run for non-fork repositories to prevent forks from triggering releases
     if: ${{ github.event.repository.fork == false }}
     permissions:
       contents: write
@@ -80,10 +72,9 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # Use PAT to allow triggering CI workflows on the release PR
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
@@ -91,20 +82,10 @@ jobs:
         with:
           toolchain: ${{ inputs.rust-toolchain || 'stable' }}
 
-      - name: Install GitHub CLI
-        run: |
-          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-          && sudo apt update \
-          && sudo apt install gh -y
-
       - name: Run release-plz
         uses: release-plz/action@v0.5
         with:
           command: release-pr
         env:
-          # Use PAT to allow triggering CI workflows on the release PR, ensure no whitespace
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

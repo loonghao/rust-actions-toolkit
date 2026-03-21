@@ -9,23 +9,24 @@ on:
     tags:
       - "v*"
 
-# We need this to be able to create releases.
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  CARGO_HTTP_TIMEOUT: 600
+  CARGO_NET_RETRY: 10
   RUSTFLAGS: -D warnings
 
 jobs:
   # Upload binary assets for projects with binaries
   upload-binary-assets:
-    name: Upload binary assets
-    # Only run if this is a version tag (not other packages in workspace)
+    name: Upload binary (${{ matrix.target }})
     if: startsWith(github.ref_name, 'v')
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Linux targets
@@ -41,7 +42,7 @@ jobs:
           - target: x86_64-apple-darwin
             os: macos-13
           - target: aarch64-apple-darwin
-            os: macos-13
+            os: macos-14
           # Windows targets
           - target: x86_64-pc-windows-msvc
             os: windows-2022
@@ -50,7 +51,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -71,12 +72,9 @@ jobs:
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
 
-      # Auto-detect binary name from Cargo.toml
       - name: Upload binary assets
         uses: taiki-e/upload-rust-binary-action@v1
         with:
-          # This will auto-detect the binary name from Cargo.toml
-          # For projects with multiple binaries, specify: bin: binary1,binary2
           target: ${{ matrix.target }}
           tar: all
           zip: windows
@@ -84,39 +82,37 @@ jobs:
 
   # Build and upload Python wheels (conditional)
   upload-python-wheels:
-    name: Upload Python wheels
-    # Only run for version tags (pyproject.toml check moved to steps)
+    name: Python Wheel (${{ matrix.target }})
     if: startsWith(github.ref_name, 'v')
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-          # Linux wheels
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          # macOS wheels
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
-          # Windows wheels
           - os: windows-latest
             target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check for pyproject.toml
         id: check-pyproject
+        shell: bash
         run: |
           if [ -f "pyproject.toml" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "✅ pyproject.toml found, proceeding with Python wheel build"
+            echo "✅ pyproject.toml found"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ pyproject.toml not found, skipping Python wheel build"
+            echo "⚠️ pyproject.toml not found, skipping"
             exit 0
           fi
 
@@ -132,7 +128,7 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Setup cross-compilation (Linux)
+      - name: Setup cross-compilation (Linux ARM64)
         if: steps.check-pyproject.outputs.exists == 'true' && matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
@@ -141,10 +137,12 @@ jobs:
 
       - name: Install maturin
         if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
         run: pip install maturin[patchelf]
 
       - name: Build Python wheels
         if: steps.check-pyproject.outputs.exists == 'true'
+        shell: bash
         run: maturin build --release --target ${{ matrix.target }}
 
       - name: Upload wheels to release

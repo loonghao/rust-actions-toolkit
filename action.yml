@@ -13,6 +13,26 @@ inputs:
     description: 'Rust toolchain version'
     required: false
     default: 'stable'
+  working-directory:
+    description: 'Working directory for cargo commands (useful for workspace projects)'
+    required: false
+    default: '.'
+  cargo-features:
+    description: 'Cargo features to enable (e.g. "feature1,feature2" or "all")'
+    required: false
+    default: ''
+  enable-cache:
+    description: 'Enable Rust compilation cache (Swatinem/rust-cache)'
+    required: false
+    default: 'true'
+  enable-sccache:
+    description: 'Enable sccache for faster compilation'
+    required: false
+    default: 'false'
+  setup-msvc:
+    description: 'Setup MSVC developer environment on Windows (for msvc targets)'
+    required: false
+    default: 'false'
 
   # CI specific inputs
   check-format:
@@ -30,11 +50,19 @@ inputs:
   clippy-args:
     description: 'Additional arguments for clippy (ci command)'
     required: false
-    default: '--all-targets --all-features -- -D warnings'
+    default: '--all-targets -- -D warnings'
+  use-nextest:
+    description: 'Use cargo-nextest for running tests (faster parallel execution)'
+    required: false
+    default: 'false'
+  test-args:
+    description: 'Additional arguments for cargo test / nextest (ci command)'
+    required: false
+    default: ''
 
   # Release specific inputs
   binary-name:
-    description: 'Binary name to release (release command)'
+    description: 'Binary name(s) to release, comma-separated for multiple (release command)'
     required: false
     default: ''
   enable-python-wheels:
@@ -83,8 +111,10 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    # Install system dependencies (Ubuntu)
-    - name: Install system dependencies
+    # ========================================
+    # System Dependencies
+    # ========================================
+    - name: Install system dependencies (Linux)
       if: runner.os == 'Linux' && inputs.command != 'release-plz'
       shell: bash
       run: |
@@ -96,12 +126,34 @@ runs:
           curl \
           git
 
-    # Common setup steps for all commands
+    # Setup MSVC developer environment on Windows
+    - name: Setup MSVC developer environment
+      if: runner.os == 'Windows' && inputs.setup-msvc == 'true' && inputs.command != 'release-plz'
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Fix link.exe conflict on Windows
+      if: runner.os == 'Windows' && inputs.setup-msvc == 'true' && inputs.command != 'release-plz'
+      shell: pwsh
+      run: |
+        # Remove Git's usr/bin link.exe which conflicts with MSVC link.exe
+        $gitPath = (Get-Command git -ErrorAction SilentlyContinue).Source
+        if ($gitPath) {
+          $gitDir = Split-Path (Split-Path $gitPath)
+          $linkPath = Join-Path $gitDir "usr\bin\link.exe"
+          if (Test-Path $linkPath) {
+            Remove-Item $linkPath -Force
+            Write-Host "✅ Removed conflicting Git link.exe: $linkPath"
+          }
+        }
+
+    # ========================================
+    # Rust Toolchain Setup (shared by ci & release)
+    # ========================================
     - name: Install Rust toolchain
       if: inputs.command != 'release-plz'
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: ${{ inputs.rust_toolchain }}
+        toolchain: ${{ inputs.rust-toolchain }}
         components: rustfmt,clippy
 
     - name: Get Rust version
@@ -115,58 +167,119 @@ runs:
         echo "📦 Cargo version: $(cargo --version)"
 
     - name: Rust cache
-      if: inputs.command != 'release-plz'
+      if: inputs.command != 'release-plz' && inputs.enable-cache == 'true'
       uses: Swatinem/rust-cache@v2
       with:
-        shared-key: "rust-toolkit-cache"
+        shared-key: "rust-toolkit-${{ inputs.command }}"
+        workspaces: "${{ inputs.working-directory }} -> target"
 
-    # CI-specific steps
-    - name: Check formatting
-      if: inputs.command == 'ci' && inputs.check_format == 'true'
+    # sccache setup (optional, for large projects)
+    - name: Setup sccache
+      if: inputs.command != 'release-plz' && inputs.enable-sccache == 'true'
+      uses: mozilla-actions/sccache-action@v0.0.6
+
+    - name: Configure sccache env
+      if: inputs.command != 'release-plz' && inputs.enable-sccache == 'true'
       shell: bash
+      run: |
+        echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+        echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
+    # ========================================
+    # CI Steps
+    # ========================================
+    - name: Check formatting
+      if: inputs.command == 'ci' && inputs.check-format == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         echo "🎨 Checking code formatting..."
         cargo fmt --all --check
 
     - name: Run clippy
-      if: inputs.command == 'ci' && inputs.check_clippy == 'true'
+      if: inputs.command == 'ci' && inputs.check-clippy == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         echo "📎 Running clippy lints..."
-        cargo clippy ${{ inputs.clippy_args }}
+        FEATURES_FLAG=""
+        if [ "${{ inputs.cargo-features }}" = "all" ]; then
+          FEATURES_FLAG="--all-features"
+        elif [ -n "${{ inputs.cargo-features }}" ]; then
+          FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+        fi
+        cargo clippy --workspace $FEATURES_FLAG ${{ inputs.clippy-args }}
 
     - name: Check documentation
-      if: inputs.command == 'ci' && inputs.check_docs == 'true'
+      if: inputs.command == 'ci' && inputs.check-docs == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         RUSTDOCFLAGS: -D warnings
       run: |
         echo "📚 Checking documentation..."
-        cargo doc --no-deps --document-private-items --workspace
+        FEATURES_FLAG=""
+        if [ "${{ inputs.cargo-features }}" = "all" ]; then
+          FEATURES_FLAG="--all-features"
+        elif [ -n "${{ inputs.cargo-features }}" ]; then
+          FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+        fi
+        cargo doc --no-deps --document-private-items --workspace $FEATURES_FLAG
 
-    - name: Run tests
-      if: inputs.command == 'ci'
+    # Install nextest if needed
+    - name: Install cargo-nextest
+      if: inputs.command == 'ci' && inputs.use-nextest == 'true'
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-nextest
+
+    - name: Run tests (nextest)
+      if: inputs.command == 'ci' && inputs.use-nextest == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "🧪 Running tests with cargo-nextest..."
+        FEATURES_FLAG=""
+        if [ "${{ inputs.cargo-features }}" = "all" ]; then
+          FEATURES_FLAG="--all-features"
+        elif [ -n "${{ inputs.cargo-features }}" ]; then
+          FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+        fi
+        cargo nextest run --workspace $FEATURES_FLAG ${{ inputs.test-args }}
+
+    - name: Run tests (cargo test)
+      if: inputs.command == 'ci' && inputs.use-nextest != 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         echo "🧪 Running tests..."
-        cargo test --verbose --workspace
+        FEATURES_FLAG=""
+        if [ "${{ inputs.cargo-features }}" = "all" ]; then
+          FEATURES_FLAG="--all-features"
+        elif [ -n "${{ inputs.cargo-features }}" ]; then
+          FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
+        fi
+        cargo test --verbose --workspace $FEATURES_FLAG ${{ inputs.test-args }}
 
-    # Release-specific steps - Native compilation approach
+    # ========================================
+    # Release Steps
+    # ========================================
     - name: Build and upload binary
       id: build-binary
       if: inputs.command == 'release'
       uses: taiki-e/upload-rust-binary-action@v1
       with:
-        bin: ${{ inputs.binary_name }}
+        bin: ${{ inputs.binary-name }}
         tar: all
         zip: windows
-        token: ${{ inputs.github_token }}
+        token: ${{ inputs.github-token }}
 
     # Python wheel building (optional)
     - name: Check for pyproject.toml
       id: check-pyproject
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true'
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         if [ -f "pyproject.toml" ]; then
           echo "exists=true" >> $GITHUB_OUTPUT
@@ -177,77 +290,78 @@ runs:
         fi
 
     - name: Set up Python
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       uses: actions/setup-python@v5
       with:
         python-version: '3.13'
 
     - name: Install maturin
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
       run: pip install maturin[patchelf]
 
     - name: Build Python wheels
       id: build-wheel
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true'
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         maturin build --release
         wheel_path=$(find target/wheels -name "*.whl" | head -1)
         echo "wheel-path=$wheel_path" >> $GITHUB_OUTPUT
 
     - name: Upload wheels to release
-      if: inputs.command == 'release' && inputs.enable_python_wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
+      if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
       uses: softprops/action-gh-release@v2
       with:
         files: ${{ steps.build-wheel.outputs.wheel-path }}
-        token: ${{ inputs.github_token }}
+        token: ${{ inputs.github-token }}
 
-    # Release-plz steps
+    # ========================================
+    # Release-plz Steps
+    # ========================================
     - name: Checkout repository (for release-plz)
       if: inputs.command == 'release-plz'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
-        token: ${{ inputs.release_plz_token || inputs.github_token }}
+        token: ${{ inputs.release-plz-token || inputs.github-token }}
 
     - name: Install Rust toolchain (for release-plz)
       if: inputs.command == 'release-plz'
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: ${{ inputs.rust_toolchain }}
+        toolchain: ${{ inputs.rust-toolchain }}
 
-    # Note: GitHub Actions composite actions don't support dynamic 'uses' expressions
-    # So we use the default version and let users override in their workflows if needed
     - name: Run release-plz release
       id: release-plz-release
-      if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release' || inputs.release_plz_command == 'both')
+      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release' || inputs.release-plz-command == 'both')
       uses: release-plz/action@v0.5
       with:
         command: release
       env:
-        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
-        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
+        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
 
     - name: Run release-plz release-pr
       id: release-plz-pr
-      if: inputs.command == 'release-plz' && (inputs.release_plz_command == 'release-pr' || inputs.release_plz_command == 'both')
+      if: inputs.command == 'release-plz' && (inputs.release-plz-command == 'release-pr' || inputs.release-plz-command == 'both')
       uses: release-plz/action@v0.5
       with:
         command: release-pr
       env:
-        GITHUB_TOKEN: ${{ inputs.release_plz_token || inputs.github_token }}
-        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo_registry_token }}
+        GITHUB_TOKEN: ${{ inputs.release-plz-token || inputs.github-token }}
+        CARGO_REGISTRY_TOKEN: ${{ inputs.cargo-registry-token }}
 
     - name: Output release-plz results
       if: inputs.command == 'release-plz'
       shell: bash
       run: |
         echo "Release-plz completed successfully!"
-        if [[ "${{ inputs.release_plz_command }}" == "release" || "${{ inputs.release_plz_command }}" == "both" ]]; then
+        if [[ "${{ inputs.release-plz-command }}" == "release" || "${{ inputs.release-plz-command }}" == "both" ]]; then
           echo "Release command executed"
         fi
-        if [[ "${{ inputs.release_plz_command }}" == "release-pr" || "${{ inputs.release_plz_command }}" == "both" ]]; then
+        if [[ "${{ inputs.release-plz-command }}" == "release-pr" || "${{ inputs.release-plz-command }}" == "both" ]]; then
           echo "Release PR command executed"
         fi
 
