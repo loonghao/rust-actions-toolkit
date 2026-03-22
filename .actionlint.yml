@@ -8,6 +8,7 @@ shellcheck:
   exclude-ids:
     - SC2034  # Variable appears unused (common in GitHub Actions)
     - SC1091  # Not following sourced files (not relevant for Actions)
+    - SC2086  # Double quote to prevent globbing (false positive with ${{ }} expressions)
 
 # Pyflakes integration (if we have Python scripts)
 pyflakes:
