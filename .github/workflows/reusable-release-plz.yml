@@ -1,6 +1,7 @@
 name: Reusable Release-plz
 
 # Reusable workflow for release-plz automation
+# Uses vx (Universal Development Tool Manager) for consistent toolchain management
 # Handles: version bumping, changelog generation, crates.io publishing, GitHub releases
 # Can be called from other repositories
 
@@ -46,10 +47,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run release-plz
         uses: release-plz/action@v0.5
@@ -77,10 +78,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_PLZ_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          toolchain: ${{ inputs.rust-toolchain || 'stable' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run release-plz
         uses: release-plz/action@v0.5

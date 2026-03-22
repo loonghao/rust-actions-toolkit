@@ -19,7 +19,7 @@ fi
 
 # Build the binary
 echo "🚀 Starting build process..."
-cargo build --release --target "$TARGET" --bin "$BINARY_NAME"
+vx cargo build --release --target "$TARGET" --bin "$BINARY_NAME"
 
 # Verify the binary was created
 BINARY_PATH="target/$TARGET/release/$BINARY_NAME"

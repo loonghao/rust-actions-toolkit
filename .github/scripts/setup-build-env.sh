@@ -28,7 +28,7 @@ case "$TARGET" in
 esac
 
 # Check if we're cross-compiling
-HOST_TARGET=$(rustc -vV | grep host | cut -d' ' -f2)
+HOST_TARGET=$(vx rustc -vV | grep host | cut -d' ' -f2)
 if [ "$HOST_TARGET" != "$TARGET" ]; then
     echo "🔄 Cross-compilation detected: $HOST_TARGET -> $TARGET"
     echo "⚠️ Note: This workflow is designed for native builds"

@@ -178,11 +178,16 @@ jobs:
           command: ci
           rust-toolchain: stable
 
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Verify Rust installation
         run: |
-          rustc --version
-          cargo --version
-          echo "✅ Rust toolchain installed successfully"
+          vx rustc --version
+          vx cargo --version
+          echo "✅ Rust toolchain installed successfully via vx"
 
   # Test cross-platform compatibility
   test-cross-platform:
@@ -202,11 +207,16 @@ jobs:
           command: ci
           rust-toolchain: stable
 
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Verify cross-platform compatibility
         run: |
           echo "🔍 Verifying cross-platform compatibility..."
-          rustc --version
-          cargo --version
+          vx rustc --version
+          vx cargo --version
           echo "✅ Cross-platform test completed on ${{ matrix.os }}"
 
   # Validate example configurations

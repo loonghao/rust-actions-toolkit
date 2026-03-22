@@ -1,6 +1,7 @@
 name: Reusable Release
 
 # Universal reusable release workflow for Rust projects
+# Uses vx (Universal Development Tool Manager) for consistent toolchain management
 # Supports: multi-platform native builds, Python wheels, MSVC, static linking
 #
 # IMPORTANT: This workflow inlines all steps directly (not via `uses: ./`)
@@ -77,10 +78,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          targets: ${{ matrix.platform.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Cross-compilation setup for Linux targets
       - name: Setup cross-compilation toolchain
@@ -119,12 +120,6 @@ jobs:
         if: endsWith(matrix.platform.target, 'windows-msvc')
         shell: bash
         run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          workspaces: "${{ inputs.working-directory }} -> target"
 
       # Upload binary assets (auto-detects binary name from Cargo.toml)
       - name: Upload binary assets
@@ -174,17 +169,11 @@ jobs:
             echo "⚠️ pyproject.toml not found, skipping"
           fi
 
-      - name: Set up Python
+      - name: Setup vx
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: loonghao/vx@main
         with:
-          python-version: '3.13'
-
-      - name: Install Rust toolchain
-        if: steps.check-pyproject.outputs.exists == 'true'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup cross-compilation (Linux ARM64)
         if: steps.check-pyproject.outputs.exists == 'true' && matrix.platform.os == 'ubuntu-latest' && matrix.platform.target == 'aarch64-unknown-linux-gnu'
@@ -196,13 +185,13 @@ jobs:
       - name: Install maturin
         if: steps.check-pyproject.outputs.exists == 'true'
         shell: bash
-        run: pip install maturin[patchelf]
+        run: vx pip install maturin[patchelf]
 
       - name: Build Python wheels
         if: steps.check-pyproject.outputs.exists == 'true'
         shell: bash
         working-directory: ${{ inputs.working-directory }}
-        run: maturin build --release --target ${{ matrix.platform.target }}
+        run: vx maturin build --release --target ${{ matrix.platform.target }}
 
       - name: Upload wheels to release
         if: steps.check-pyproject.outputs.exists == 'true'

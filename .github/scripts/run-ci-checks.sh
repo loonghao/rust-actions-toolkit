@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Script to run comprehensive CI checks
+# Script to run comprehensive CI checks using vx
 # Usage: ./run-ci-checks.sh [--enable-audit] [--enable-coverage] [--toolchain=stable]
 
 ENABLE_AUDIT=false
@@ -38,18 +38,18 @@ echo ""
 
 # Check formatting
 echo "🎨 Checking code formatting..."
-if cargo fmt --all -- --check; then
+if vx cargo fmt --all -- --check; then
     echo "✅ Code formatting is correct"
 else
     echo "❌ Code formatting issues found"
-    echo "💡 Run 'cargo fmt --all' to fix formatting"
+    echo "💡 Run 'vx cargo fmt --all' to fix formatting"
     exit 1
 fi
 echo ""
 
 # Run Clippy
 echo "📎 Running Clippy..."
-if cargo clippy --all-targets --all-features -- -D warnings; then
+if vx cargo clippy --all-targets --all-features -- -D warnings; then
     echo "✅ Clippy checks passed"
 else
     echo "❌ Clippy found issues"
@@ -60,7 +60,7 @@ echo ""
 # Check documentation
 echo "📚 Checking documentation..."
 export RUSTDOCFLAGS="-D warnings"
-if cargo doc --no-deps --document-private-items --all-features; then
+if vx cargo doc --no-deps --document-private-items --all-features; then
     echo "✅ Documentation builds successfully"
 else
     echo "❌ Documentation build failed"
@@ -70,7 +70,7 @@ echo ""
 
 # Run tests
 echo "🧪 Running tests..."
-if cargo test --all-features; then
+if vx cargo test --all-features; then
     echo "✅ All tests passed"
 else
     echo "❌ Some tests failed"
@@ -81,14 +81,14 @@ echo ""
 # Security audit (optional)
 if [ "$ENABLE_AUDIT" = true ]; then
     echo "🔒 Running security audit..."
-    
+
     # Install cargo-audit if not present
     if ! command -v cargo-audit >/dev/null 2>&1; then
         echo "📦 Installing cargo-audit..."
-        cargo install cargo-audit
+        vx cargo install cargo-audit
     fi
-    
-    if cargo audit; then
+
+    if vx cargo audit; then
         echo "✅ Security audit passed"
     else
         echo "⚠️ Security audit found issues"
@@ -100,21 +100,21 @@ fi
 # Code coverage (optional)
 if [ "$ENABLE_COVERAGE" = true ]; then
     echo "📊 Generating code coverage..."
-    
+
     # Install cargo-llvm-cov if not present
     if ! command -v cargo-llvm-cov >/dev/null 2>&1; then
         echo "📦 Installing cargo-llvm-cov..."
-        cargo install cargo-llvm-cov
+        vx cargo install cargo-llvm-cov
     fi
-    
-    if cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info; then
+
+    if vx cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info; then
         echo "✅ Code coverage generated"
         echo "coverage-file=lcov.info" >> "$GITHUB_OUTPUT"
-        
+
         # Show coverage summary if possible
         if command -v cargo-llvm-cov >/dev/null 2>&1; then
             echo "📈 Coverage summary:"
-            cargo llvm-cov --all-features --workspace --summary-only || true
+            vx cargo llvm-cov --all-features --workspace --summary-only || true
         fi
     else
         echo "⚠️ Code coverage generation failed"
@@ -125,15 +125,15 @@ fi
 echo "🎉 All CI checks completed successfully!"
 echo ""
 echo "📋 Summary of checks performed:"
-echo "  ✅ Code formatting (cargo fmt)"
-echo "  ✅ Code quality (cargo clippy)"
-echo "  ✅ Documentation (cargo doc)"
-echo "  ✅ Unit tests (cargo test)"
+echo "  ✅ Code formatting (vx cargo fmt)"
+echo "  ✅ Code quality (vx cargo clippy)"
+echo "  ✅ Documentation (vx cargo doc)"
+echo "  ✅ Unit tests (vx cargo test)"
 if [ "$ENABLE_AUDIT" = true ]; then
-    echo "  ✅ Security audit (cargo audit)"
+    echo "  ✅ Security audit (vx cargo audit)"
 fi
 if [ "$ENABLE_COVERAGE" = true ]; then
-    echo "  ✅ Code coverage (cargo llvm-cov)"
+    echo "  ✅ Code coverage (vx cargo llvm-cov)"
 fi
 echo ""
 echo "🎯 Core CI: Fast, reliable, comprehensive"

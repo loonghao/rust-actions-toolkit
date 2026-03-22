@@ -1,6 +1,7 @@
 name: Reusable CI
 
 # Universal reusable CI workflow for Rust projects
+# Uses vx (Universal Development Tool Manager) for consistent toolchain management
 # Supports: workspaces, cargo features, nextest, MSVC, multi-platform testing
 #
 # IMPORTANT: This workflow inlines all steps directly (not via `uses: ./`)
@@ -86,22 +87,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          components: rustfmt, clippy
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          workspaces: "${{ inputs.working-directory }} -> target"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check formatting
         shell: bash
         working-directory: ${{ inputs.working-directory }}
-        run: cargo fmt --all -- --check
+        run: vx cargo fmt --all -- --check
 
       - name: Run Clippy
         shell: bash
@@ -113,7 +107,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo clippy --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.clippy-args }}
+          vx cargo clippy --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.clippy-args }}
 
       - name: Check documentation
         shell: bash
@@ -127,7 +121,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo doc --no-deps --document-private-items --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"}
+          vx cargo doc --no-deps --document-private-items --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"}
 
   # ==========================================
   # Cross-platform testing
@@ -162,17 +156,10 @@ jobs:
             }
           }
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          components: rustfmt, clippy
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          workspaces: "${{ inputs.working-directory }} -> target"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Install nextest via install-action (much faster than cargo install)
       - name: Install cargo-nextest
@@ -192,7 +179,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo nextest run --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
+          vx cargo nextest run --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
 
       - name: Run tests (cargo test)
         if: ${{ !inputs.use-nextest }}
@@ -205,7 +192,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo test --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
+          vx cargo test --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} ${{ inputs.test-args }}
 
   # ==========================================
   # Security audit
@@ -218,6 +205,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install cargo-audit
         uses: taiki-e/install-action@v2
         with:
@@ -226,7 +218,7 @@ jobs:
       - name: Run security audit
         shell: bash
         working-directory: ${{ inputs.working-directory }}
-        run: cargo audit
+        run: vx cargo audit
 
   # ==========================================
   # Code coverage (optional)
@@ -239,17 +231,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@master
+      - name: Setup vx
+        uses: loonghao/vx@main
         with:
-          toolchain: ${{ inputs.rust-toolchain }}
-          components: llvm-tools-preview
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-          workspaces: "${{ inputs.working-directory }} -> target"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
@@ -266,7 +251,7 @@ jobs:
           elif [ -n "${{ inputs.cargo-features }}" ]; then
             FEATURES_FLAG="--features ${{ inputs.cargo-features }}"
           fi
-          cargo llvm-cov --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} --lcov --output-path lcov.info
+          vx cargo llvm-cov --workspace ${FEATURES_FLAG:+"$FEATURES_FLAG"} --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -299,23 +284,17 @@ jobs:
             echo "⚠️ pyproject.toml not found, skipping"
           fi
 
-      - name: Set up Python
+      - name: Setup vx
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: loonghao/vx@main
         with:
-          python-version: '3.13'
-
-      - name: Install Rust toolchain
-        if: steps.check-pyproject.outputs.exists == 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-toolchain }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install maturin and build
         if: steps.check-pyproject.outputs.exists == 'true'
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         run: |
-          pip install maturin[patchelf]
-          maturin build --release
+          vx pip install maturin[patchelf]
+          vx maturin build --release
           echo "✅ Python wheel built successfully"
