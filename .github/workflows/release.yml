@@ -2,6 +2,7 @@ name: Release
 
 # Universal release workflow for Rust projects
 # Triggered by release-plz when it creates a tag
+# Uses vx (Universal Development Tool Manager) for consistent toolchain management
 # Supports: binary releases, Python wheels, cross-platform compilation
 
 on:
@@ -53,8 +54,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup cross-compilation toolchain
         uses: taiki-e/setup-cross-toolchain-action@v1
@@ -116,17 +119,11 @@ jobs:
             exit 0
           fi
 
-      - name: Set up Python
+      - name: Setup vx
         if: steps.check-pyproject.outputs.exists == 'true'
-        uses: actions/setup-python@v5
+        uses: loonghao/vx@main
         with:
-          python-version: '3.13'
-
-      - name: Install Rust toolchain
-        if: steps.check-pyproject.outputs.exists == 'true'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup cross-compilation (Linux ARM64)
         if: steps.check-pyproject.outputs.exists == 'true' && matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
@@ -138,12 +135,12 @@ jobs:
       - name: Install maturin
         if: steps.check-pyproject.outputs.exists == 'true'
         shell: bash
-        run: pip install maturin[patchelf]
+        run: vx pip install maturin[patchelf]
 
       - name: Build Python wheels
         if: steps.check-pyproject.outputs.exists == 'true'
         shell: bash
-        run: maturin build --release --target ${{ matrix.target }}
+        run: vx maturin build --release --target ${{ matrix.target }}
 
       - name: Upload wheels to release
         if: steps.check-pyproject.outputs.exists == 'true'
