@@ -1,7 +1,7 @@
 name: Release Please
 
 # Automated release management using release-please
-# - On push to master: creates/updates a release PR with version bump and changelog
+# - On push to master/main: creates/updates a release PR with version bump and changelog
 # - When release PR is merged: creates GitHub release with tag
 # - Tag creation triggers publish-action.yml for Marketplace publishing
 
@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - master
+      - main
 
 jobs:
   release-please:
