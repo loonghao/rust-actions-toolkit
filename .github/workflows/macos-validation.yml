@@ -45,6 +45,6 @@ jobs:
           binary="target/$TARGET/release/runner-fixture"
           test "$(uname -m)" = "$EXPECTED_ARCH"
           file "$binary"
-          lipo -verify_arch "$EXPECTED_ARCH" "$binary"
+          lipo "$binary" -verify_arch "$EXPECTED_ARCH"
           xcrun vtool -show-build "$binary"
           "$binary" --version
