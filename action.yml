@@ -278,7 +278,7 @@ runs:
 
     - name: Upload wheels to release
       if: inputs.command == 'release' && inputs.enable-python-wheels == 'true' && steps.check-pyproject.outputs.exists == 'true' && steps.build-wheel.outputs.wheel-path != ''
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
       with:
         files: ${{ steps.build-wheel.outputs.wheel-path }}
         token: ${{ inputs.github-token }}
